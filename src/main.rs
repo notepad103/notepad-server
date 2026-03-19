@@ -2,6 +2,6 @@
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let config = notepad::Config::from_env()?;
-    notepad::run(config).await
+    notepad::Config::init_global()?;
+    notepad::run().await
 }

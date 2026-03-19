@@ -14,8 +14,9 @@ pub use state::AppState;
 
 use sqlx::postgres::PgPoolOptions;
 
-/// 构建并运行 HTTP 服务
-pub async fn run(config: Config) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+/// 构建并运行 HTTP 服务（使用全局 Config，需先调用 Config::init_global()）
+pub async fn run() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let config = Config::global();
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(&config.database_url)

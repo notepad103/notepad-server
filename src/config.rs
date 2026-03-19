@@ -1,4 +1,8 @@
 use std::fmt;
+use std::sync::OnceLock;
+
+/// 全局配置单例，启动时通过 `init_global()` 初始化
+static GLOBAL_CONFIG: OnceLock<Config> = OnceLock::new();
 
 /// 应用配置（从环境变量 / .env 加载）
 #[derive(Clone)]
@@ -28,5 +32,16 @@ impl Config {
             database_url,
             bind_addr: std::env::var("BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:3000".into()),
         })
+    }
+
+    /// 从环境变量加载并注册到全局，仅应在程序入口调用一次。
+    pub fn init_global() -> Result<&'static Config, ConfigError> {
+        let config = Self::from_env()?;
+        Ok(GLOBAL_CONFIG.get_or_init(|| config))
+    }
+
+    /// 获取已初始化的全局配置，未初始化时 panic。
+    pub fn global() -> &'static Config {
+        GLOBAL_CONFIG.get().expect("Config 未初始化，请先调用 Config::init_global()")
     }
 }
