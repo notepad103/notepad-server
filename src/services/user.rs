@@ -17,7 +17,6 @@ pub async fn create_user(pool: &PgPool, req: CreateUserRequest) -> Result<UserRe
     .bind(&req.password)
     .fetch_one(pool)
     .await?;
-    println!("row: {:?}", row);
 
     let id: i32 = row.get(0);
     let username: String = row.get(1);
@@ -39,7 +38,7 @@ pub async fn get_user(pool: &PgPool, id: i32) -> Result<UserResponse, AppError> 
     .bind(id)
     .fetch_one(pool)
     .await?;
-    println!("row: {:?}", row);
+
     Ok(UserResponse {
         id: row.get(0),
         username: row.get(1),

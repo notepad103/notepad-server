@@ -35,6 +35,18 @@ BIND_ADDR=0.0.0.0:3000
 cargo run
 ```
 
+也可以使用项目根目录的 `Makefile`：
+```bash
+make dev    # 运行服务（等价于 cargo run）
+make check  # 编译检查（cargo check）
+make watch  # 监听 src/ 和 migrations/ 变化后自动重启（需要 cargo-watch）
+```
+
+首次使用 `make watch` 前，先安装：
+```bash
+cargo install cargo-watch
+```
+
 首次运行会自动执行 `migrations/` 下的数据库迁移。
 
 ## API
