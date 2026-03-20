@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 pub struct CreateUserRequest {
     pub username: String,
     pub email: String,
+    pub password: String,
 }
 
 #[derive(Debug, Serialize)]
