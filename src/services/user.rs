@@ -65,7 +65,7 @@ pub async fn send_verification_code(
         .fetch_one(pool)
         .await?;
 
-    let Some(mut redis) = redis else {
+    let Some(mut redis_service) = redis else {
         return Err(AppError::BadRequest(
             "验证码服务未启用（请配置 REDIS_URL）".into(),
         ));
@@ -75,7 +75,7 @@ pub async fn send_verification_code(
     let key = format!("verify:email:{email}");
     let ttl_secs = 300u64;
 
-    let _: () = redis.set_ex(&key, code.to_string(), ttl_secs).await?;
+    let _: () = redis_service.set_ex(&key, code.to_string(), ttl_secs).await?;
 
     Ok(())
 }
