@@ -7,6 +7,7 @@ Rust 后端服务：Axum + SQLx (PostgreSQL)，提供用户等 API。
 - **Runtime**: Tokio
 - **Web**: Axum
 - **数据库**: PostgreSQL (SQLx，带迁移)
+- **缓存**: Redis（可选，通过 `REDIS_URL` 启用）
 
 ## 环境要求
 
@@ -25,7 +26,10 @@ DATABASE_URL=postgres://user:password@localhost:5432/notepad
 
 ```env
 BIND_ADDR=0.0.0.0:3000
+REDIS_URL=redis://127.0.0.1:6379
 ```
+
+未设置 `REDIS_URL` 时服务照常启动，仅不连接 Redis；`GET /` 中 `redis` 字段为 `null`。
 
 默认监听 `0.0.0.0:3000`。
 
@@ -53,7 +57,7 @@ cargo install cargo-watch
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/` | 根路径，返回 `{ "ok": true, "db": 1 }`（数据库连通时） |
+| GET | `/` | 根路径，返回 `{ "ok": true, "db": 1, "redis": "PONG" \| null \| false }`（配置了 Redis 且连通时为 `"PONG"`，未配置为 `null`，配置了但失败为 `false`） |
 | GET | `/health` | 健康检查，返回 `ok` |
 | POST | `/users` | 创建用户，请求体 `{ "username": "xxx", "email": "xxx@example.com" }`，成功返回 201 及用户信息 |
 

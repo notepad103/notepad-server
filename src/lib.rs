@@ -12,6 +12,7 @@ pub use config::Config;
 pub use error::AppError;
 pub use state::AppState;
 
+use redis::aio::ConnectionManager;
 use sqlx::postgres::PgPoolOptions;
 
 /// 构建并运行 HTTP 服务（使用全局 Config，需先调用 Config::init_global()）
@@ -27,7 +28,15 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .run(&pool)
         .await?;
 
-    let state = AppState::new(pool);
+    let redis = match config.redis_url.as_deref() {
+        Some(url) => {
+            let client = redis::Client::open(url)?;
+            Some(ConnectionManager::new(client).await?)
+        }
+        None => None,
+    };
+
+    let state = AppState::new(pool, redis);
     let app = routes::routes().with_state(state);
 
     let listener = tokio::net::TcpListener::bind(&config.bind_addr).await?;

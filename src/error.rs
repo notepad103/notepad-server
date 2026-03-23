@@ -54,3 +54,9 @@ impl From<sqlx::Error> for AppError {
         }
     }
 }
+
+impl From<redis::RedisError> for AppError {
+    fn from(e: redis::RedisError) -> Self {
+        AppError::Internal(e.to_string())
+    }
+}

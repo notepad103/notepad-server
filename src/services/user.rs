@@ -1,6 +1,9 @@
 //! 用户相关业务逻辑（与 HTTP 无关）
 
 use chrono::Utc;
+use rand::Rng;
+use redis::aio::ConnectionManager;
+use redis::AsyncCommands;
 use sqlx::Row;
 
 use crate::error::AppError;
@@ -45,4 +48,34 @@ pub async fn get_user(pool: &PgPool, id: i32) -> Result<UserResponse, AppError> 
         email: row.get(2),
         created_at: row.get(3),
     })
+}
+
+/// 发送验证码：校验用户存在后，将验证码写入 Redis（`verify:email:{email}`），默认 300 秒过期。
+///
+/// - `redis` 为 `None`（未配置 `REDIS_URL`）时返回 `BadRequest`，避免误以为已发码。
+/// - 调用方传入 `state.redis.clone()` 即可（`ConnectionManager` 克隆成本低）。
+#[allow(dead_code)]
+pub async fn send_verification_code(
+    pool: &PgPool,
+    redis: Option<ConnectionManager>,
+    email: &str,
+) -> Result<(), AppError> {
+    sqlx::query_scalar::<_, i32>("SELECT id FROM users WHERE email = $1")
+        .bind(email)
+        .fetch_one(pool)
+        .await?;
+
+    let Some(mut redis) = redis else {
+        return Err(AppError::BadRequest(
+            "验证码服务未启用（请配置 REDIS_URL）".into(),
+        ));
+    };
+
+    let code: u32 = rand::thread_rng().gen_range(100_000..=999_999);
+    let key = format!("verify:email:{email}");
+    let ttl_secs = 300u64;
+
+    let _: () = redis.set_ex(&key, code.to_string(), ttl_secs).await?;
+
+    Ok(())
 }

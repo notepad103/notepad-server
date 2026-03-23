@@ -9,6 +9,8 @@ static GLOBAL_CONFIG: OnceLock<Config> = OnceLock::new();
 pub struct Config {
     pub database_url: String,
     pub bind_addr: String,
+    /// 未设置则 Redis 相关能力关闭（不影响 PostgreSQL）
+    pub redis_url: Option<String>,
 }
 
 #[derive(Debug)]
@@ -28,9 +30,11 @@ impl Config {
         let database_url = std::env::var("DATABASE_URL").map_err(|_| {
             ConfigError("请设置 DATABASE_URL（可在项目根目录创建 .env 文件）".into())
         })?;
+        let redis_url = std::env::var("REDIS_URL").ok();
         Ok(Self {
             database_url,
             bind_addr: std::env::var("BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:3000".into()),
+            redis_url,
         })
     }
 
