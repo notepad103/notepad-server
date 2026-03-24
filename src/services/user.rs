@@ -2,8 +2,8 @@
 
 use chrono::Utc;
 use rand::Rng;
-use redis::aio::ConnectionManager;
 use redis::AsyncCommands;
+use redis::aio::ConnectionManager;
 use sqlx::Row;
 
 use crate::error::AppError;
@@ -35,12 +35,10 @@ pub async fn create_user(pool: &PgPool, req: CreateUserRequest) -> Result<UserRe
 }
 
 pub async fn get_user(pool: &PgPool, id: i32) -> Result<UserResponse, AppError> {
-    let row = sqlx::query(
-        "SELECT id, username, email, created_at FROM users WHERE id = $1",
-    )
-    .bind(id)
-    .fetch_one(pool)
-    .await?;
+    let row = sqlx::query("SELECT id, username, email, created_at FROM users WHERE id = $1")
+        .bind(id)
+        .fetch_one(pool)
+        .await?;
 
     Ok(UserResponse {
         id: row.get(0),
@@ -70,12 +68,16 @@ pub async fn send_verification_code(
             "验证码服务未启用（请配置 REDIS_URL）".into(),
         ));
     };
+    
 
+    // 1000..2000.gen_range()
     let code: u32 = rand::thread_rng().gen_range(100_000..=999_999);
     let key = format!("verify:email:{email}");
     let ttl_secs = 300u64;
 
-    let _: () = redis_service.set_ex(&key, code.to_string(), ttl_secs).await?;
+    let _: () = redis_service
+        .set_ex(&key, code.to_string(), ttl_secs)
+        .await?;
 
     Ok(())
 }

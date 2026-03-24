@@ -7,6 +7,7 @@ mod models;
 mod routes;
 mod services;
 mod state;
+mod utils;
 
 pub use config::Config;
 pub use error::AppError;
