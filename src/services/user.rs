@@ -5,6 +5,7 @@ use rand::Rng;
 use redis::AsyncCommands;
 use redis::aio::ConnectionManager;
 use sqlx::Row;
+use crate::utils::email;
 
 use crate::error::AppError;
 use crate::models::{CreateUserRequest, UserResponse};
@@ -74,7 +75,8 @@ pub async fn send_verification_code(
     let code: u32 = rand::thread_rng().gen_range(100_000..=999_999);
     let key = format!("verify:email:{email}");
     let ttl_secs = 300u64;
-
+    //  email::smtp_transport::send_verification_code(&mut email_service, email, code).await?;
+    email::smtp_transport::send_verification_code(email, code).await?;
     let _: () = redis_service
         .set_ex(&key, code.to_string(), ttl_secs)
         .await?;
