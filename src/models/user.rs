@@ -8,6 +8,8 @@ pub struct CreateUserRequest {
     pub username: String,
     pub email: String,
     pub password: String,
+    /// 与 `POST /users/:email/verify` 下发到 Redis 的验证码一致
+    pub verification_code: String,
 }
 
 #[derive(Debug, Serialize)]

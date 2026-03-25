@@ -14,7 +14,7 @@ pub async fn create_user(
     State(state): State<AppState>,
     Json(req): Json<CreateUserRequest>,
 ) -> Result<(StatusCode, Json<crate::models::UserResponse>), AppError> {
-    let user = services::create_user_service(&state.db, req).await?;
+    let user = services::create_user_service(&state.db, state.redis.clone(), req).await?;
     Ok((StatusCode::CREATED, Json(user)))
 }
 
@@ -31,6 +31,6 @@ pub async fn send_verification_code(
     State(state): State<AppState>,
     Path(email): Path<String>,
 ) -> Result<(StatusCode, Json<()>), AppError> {
-    services::send_verification_code(&state.db, state.redis.clone(), &email).await?;
+    services::send_verification_code(state.redis.clone(), &email).await?;
     Ok((StatusCode::OK, Json(())))
 }
