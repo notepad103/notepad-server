@@ -11,6 +11,13 @@ pub struct Config {
     pub bind_addr: String,
     /// 未设置则 Redis 相关能力关闭（不影响 PostgreSQL）
     pub redis_url: Option<String>,
+    /// 发件人地址（须与邮箱服务商开 SMTP 的账号一致）
+    pub smtp_from_email: String,
+    /// SMTP 主机，如 QQ：`smtp.qq.com`，163：`smtp.163.com`
+    pub smtp_host: String,
+    pub smtp_port: u16,
+    /// 通常为邮箱「协议」里的授权码，不是登录密码
+    pub smtp_auth_code: String,
 }
 
 #[derive(Debug)]
@@ -31,10 +38,26 @@ impl Config {
             ConfigError("请设置 DATABASE_URL（可在项目根目录创建 .env 文件）".into())
         })?;
         let redis_url = std::env::var("REDIS_URL").ok();
+        let smtp_from_email = std::env::var("SMTP_FROM_EMAIL").map_err(|_| {
+            ConfigError("请设置 SMTP_FROM_EMAIL（发件邮箱地址）".into())
+        })?;
+        let smtp_host = std::env::var("SMTP_HOST")
+            .unwrap_or_else(|_| "smtp.qq.com".to_string());
+        let smtp_port = std::env::var("SMTP_PORT")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(465);
+        let smtp_auth_code = std::env::var("SMTP_AUTH_CODE").map_err(|_| {
+            ConfigError("请设置 SMTP_AUTH_CODE（SMTP 授权码）".into())
+        })?;
         Ok(Self {
             database_url,
             bind_addr: std::env::var("BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:3000".into()),
             redis_url,
+            smtp_from_email,
+            smtp_host,
+            smtp_port,
+            smtp_auth_code,
         })
     }
 

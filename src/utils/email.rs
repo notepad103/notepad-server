@@ -1,10 +1,7 @@
 use crate::AppError;
+use crate::Config;
 use lettre::{Message, SmtpTransport, Transport, transport::smtp::authentication::Credentials};
 use std::sync::LazyLock;
-
-// const SMTP_SERVER: &str = "smtp.qq.com";
-// const SMTP_PORT: u16 = 587;
-// const AUTH_CODE: &str = "123456";
 
 pub struct to_email {
     pub to_email: String,
@@ -12,28 +9,17 @@ pub struct to_email {
     pub body: String,
 }
 
-struct smtp_transport_builder<'a> {
-    pub from_email: &'a str,
-    pub smtp_server: &'a str,
-    pub smtp_port: u16,
-    pub auth_code: &'a str,
-}
-
 pub struct smtp_transport;
 
-const SMTP_TRANSPORT_CONFIG: smtp_transport_builder<'static> = smtp_transport_builder {
-    from_email: "123456@qq.com",
-    smtp_server: "imap.qq.com",
-    smtp_port: 465,
-    auth_code: "knczektozzvrbaai",
-};
-
 static SMTP_TRANSPORT: LazyLock<SmtpTransport> = LazyLock::new(|| {
-    SmtpTransport::builder_dangerous(SMTP_TRANSPORT_CONFIG.smtp_server)
-        .port(SMTP_TRANSPORT_CONFIG.smtp_port)
+    let c = Config::global();
+    // `relay`：默认 SMTPS（465 + TLS wrapper）；host 须为 SMTP，勿填 `imap.*`
+    SmtpTransport::relay(c.smtp_host.as_str())
+        .expect("smtp relay (tls) init failed; check SMTP_HOST and lettre TLS features")
+        .port(c.smtp_port)
         .credentials(Credentials::new(
-            SMTP_TRANSPORT_CONFIG.from_email.to_string(),
-            SMTP_TRANSPORT_CONFIG.auth_code.to_string(),
+            c.smtp_from_email.clone(),
+            c.smtp_auth_code.clone(),
         ))
         .build()
 });
@@ -44,10 +30,10 @@ impl smtp_transport {
     }
 
     pub async fn send_email(data: to_email) -> Result<(), AppError> {
+        let from = Config::global().smtp_from_email.as_str();
         let email = Message::builder()
             .from(
-                SMTP_TRANSPORT_CONFIG
-                    .from_email
+                from
                     .parse()
                     .map_err(|e| AppError::BadRequest(format!("invalid from email: {e}")))?,
             )
@@ -67,8 +53,8 @@ impl smtp_transport {
     pub async fn send_verification_code(email: &str, code: u32) -> Result<(), AppError> {
         let data = to_email {
             to_email: email.to_string(),
-            subject: "Verification Code".to_string(),
-            body: format!("Your verification code is: {code}"),
+            subject: "验证码".to_string(),
+            body: format!("您的验证码是：{code}"),
         };
         Self::send_email(data).await
     }
