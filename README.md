@@ -1,37 +1,48 @@
 # notepad-server
 
-Rust 后端服务：Axum + SQLx (PostgreSQL)，提供用户等 API。
+Rust 后端服务：Axum + SQLx (PostgreSQL)，提供用户与验证码相关 API。
 
 ## 技术栈
 
 - **Runtime**: Tokio
 - **Web**: Axum
-- **数据库**: PostgreSQL (SQLx，带迁移)
-- **缓存**: Redis（可选，通过 `REDIS_URL` 启用）
+- **数据库**: PostgreSQL（SQLx，带迁移）
+- **缓存**: Redis（验证码写入 Redis，发码前须配置 `REDIS_URL`）
+- **邮件**: Lettre（SMTP，用于发送验证码邮件）
 
 ## 环境要求
 
-- Rust 1.70+
+- Rust toolchain（本仓库 `edition = "2024"`，建议使用当前 stable）
 - PostgreSQL
+- Redis（使用「发送验证码」接口时需要）
+- 可访问的 SMTP（QQ/163 等需开启 SMTP 并使用**授权码**，非登录密码）
 
 ## 配置
 
-在项目根目录创建 `.env`：
+1. 复制环境变量模板并编辑：
 
-```env
-DATABASE_URL=postgres://user:password@localhost:5432/notepad
+```bash
+cp .env.example .env
 ```
 
-可选：
+2. **必填**
 
-```env
-BIND_ADDR=0.0.0.0:3000
-REDIS_URL=redis://127.0.0.1:6379
-```
+| 变量 | 说明 |
+|------|------|
+| `DATABASE_URL` | PostgreSQL 连接串 |
+| `SMTP_FROM_EMAIL` | 发件邮箱（须与邮箱里开启 SMTP 的账号一致） |
+| `SMTP_AUTH_CODE` | SMTP 授权码 |
 
-未设置 `REDIS_URL` 时服务照常启动，仅不连接 Redis；`GET /` 中 `redis` 字段为 `null`。
+3. **常用可选**
 
-默认监听 `0.0.0.0:3000`。
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `BIND_ADDR` | `0.0.0.0:3000` | HTTP 监听地址 |
+| `REDIS_URL` | 未设置 | 不设则服务能启动，但发验证码会返回业务错误提示未启用 Redis |
+| `SMTP_HOST` | `smtp.qq.com` | SMTP 主机（163 可填 `smtp.163.com`） |
+| `SMTP_PORT` | `465` | SMTP 端口（与 SMTPS/TLS 方式一致） |
+
+**安全**：不要把真实 `.env` 提交到 Git；仓库内仅保留 `.env.example` 占位。敏感信息泄露后请尽快在邮箱侧**重置授权码**。
 
 ## 运行
 
@@ -39,14 +50,16 @@ REDIS_URL=redis://127.0.0.1:6379
 cargo run
 ```
 
-也可以使用项目根目录的 `Makefile`：
+也可使用项目根目录的 `Makefile`：
+
 ```bash
 make dev    # 运行服务（等价于 cargo run）
 make check  # 编译检查（cargo check）
-make watch  # 监听 src/ 和 migrations/ 变化后自动重启（需要 cargo-watch）
+make watch  # 监听 src/ 与 migrations/ 后自动重启（需 cargo-watch）
 ```
 
-首次使用 `make watch` 前，先安装：
+首次使用 `make watch` 前：
+
 ```bash
 cargo install cargo-watch
 ```
@@ -57,9 +70,27 @@ cargo install cargo-watch
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/` | 根路径，返回 `{ "ok": true, "db": 1, "redis": "PONG" \| null \| false }`（配置了 Redis 且连通时为 `"PONG"`，未配置为 `null`，配置了但失败为 `false`） |
-| GET | `/health` | 健康检查，返回 `ok` |
-| POST | `/users` | 创建用户，请求体 `{ "username": "xxx", "email": "xxx@example.com" }`，成功返回 201 及用户信息 |
+| GET | `/` | 根路径：`{ "ok": true, "db": 1, "redis": "PONG" \| null \| false }` |
+| GET | `/health` | 健康检查，纯文本 `ok` |
+| POST | `/users` | 创建用户，JSON：`username`、`email`、`password`；成功 **201** 及用户信息 |
+| GET | `/users/:id` | 按 id 查询用户 |
+| POST | `/users/:email/verify` | 用户须已存在；写 Redis `verify:email:{email}`（约 300s）并发验证码邮件。路径里的邮箱建议 URL 编码，例如 `@` 写为 `%40` |
+
+### 请求示例
+
+创建用户：
+
+```bash
+curl -X POST "http://127.0.0.1:3000/users" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"demo","email":"user@example.com","password":"secret"}'
+```
+
+发送验证码（邮箱含 `@` 时使用编码）：
+
+```bash
+curl -X POST "http://127.0.0.1:3000/users/user%40example.com/verify"
+```
 
 ## 项目结构
 
@@ -69,9 +100,10 @@ src/
 ├── lib.rs        # 应用组装与启动
 ├── config.rs     # 配置（环境变量）
 ├── error.rs      # 统一错误类型
-├── state.rs      # 应用状态（DB 连接池）
+├── state.rs      # 应用状态（DB、可选 Redis）
 ├── models/       # 请求/响应 DTO
 ├── routes/       # 路由注册
-├── handlers/     # HTTP 处理（参数解析、调用 service）
-└── services/     # 业务与数据库逻辑
+├── handlers/     # HTTP 处理
+├── services/     # 业务与数据库逻辑
+└── utils/        # 工具（如邮件）
 ```
