@@ -16,6 +16,10 @@ pub enum AppError {
     Conflict(String),
     /// 客户端请求错误
     BadRequest(String),
+    /// 未认证或令牌无效
+    Unauthorized(String),
+    /// 已认证但无权限
+    Forbidden(String),
 }
 
 impl AppError {
@@ -24,6 +28,8 @@ impl AppError {
             AppError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Conflict(_) => StatusCode::CONFLICT,
             AppError::BadRequest(_) => StatusCode::BAD_REQUEST,
+            AppError::Unauthorized(_) => StatusCode::UNAUTHORIZED,
+            AppError::Forbidden(_) => StatusCode::FORBIDDEN,
         }
     }
 
@@ -32,6 +38,8 @@ impl AppError {
             AppError::Internal(s) => s.as_str(),
             AppError::Conflict(s) => s.as_str(),
             AppError::BadRequest(s) => s.as_str(),
+            AppError::Unauthorized(s) => s.as_str(),
+            AppError::Forbidden(s) => s.as_str(),
         }
     }
 }
@@ -58,5 +66,11 @@ impl From<sqlx::Error> for AppError {
 impl From<redis::RedisError> for AppError {
     fn from(e: redis::RedisError) -> Self {
         AppError::Internal(e.to_string())
+    }
+}
+
+impl From<jsonwebtoken::errors::Error> for AppError {
+    fn from(_: jsonwebtoken::errors::Error) -> Self {
+        AppError::Unauthorized("无效或过期的令牌".into())
     }
 }

@@ -1,5 +1,6 @@
 //! notepad 应用库入口，供 main 与测试使用
 
+mod auth;
 mod config;
 mod error;
 mod handlers;
@@ -8,6 +9,7 @@ mod routes;
 mod services;
 mod state;
 mod utils;
+mod other;
 
 pub use config::Config;
 pub use error::AppError;

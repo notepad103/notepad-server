@@ -1,7 +1,8 @@
 //! 用户相关 HTTP 处理（只做提取参数与调用 service）
 
+use crate::auth::{self, AuthUser};
 use crate::error::AppError;
-use crate::models::CreateUserRequest;
+use crate::models::{CreateUserRequest, LoginRequest, LoginResponse};
 use crate::services;
 use crate::state::AppState;
 use axum::{
@@ -18,11 +19,30 @@ pub async fn create_user(
     Ok((StatusCode::CREATED, Json(user)))
 }
 
+pub async fn login(
+    State(state): State<AppState>,
+    Json(req): Json<LoginRequest>,
+) -> Result<(StatusCode, Json<LoginResponse>), AppError> {
+    let user = services::login(&state.db, &req.email, &req.password).await?;
+    let access_token = auth::sign_token(user.id)?;
+    Ok((
+        StatusCode::OK,
+        Json(LoginResponse {
+            access_token,
+            token_type: "Bearer",
+            user,
+        }),
+    ))
+}
+
 pub async fn get_user(
+    AuthUser(auth_id): AuthUser,
     State(state): State<AppState>,
     Path(id): Path<i32>,
 ) -> Result<(StatusCode, Json<crate::models::UserResponse>), AppError> {
-    println!("id: {:?}", id);
+    if auth_id != id {
+        return Err(AppError::Forbidden("只能查看本人的用户信息".into()));
+    }
     let user = services::get_user(&state.db, id).await?;
     Ok((StatusCode::OK, Json(user)))
 }

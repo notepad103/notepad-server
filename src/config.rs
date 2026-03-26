@@ -18,6 +18,10 @@ pub struct Config {
     pub smtp_port: u16,
     /// 通常为邮箱「协议」里的授权码，不是登录密码
     pub smtp_auth_code: String,
+    /// HS256 密钥，生产环境须为足够长的随机串（勿泄露、勿提交到 Git）
+    pub jwt_secret: String,
+    /// 访问令牌过期秒数
+    pub jwt_exp_secs: u64,
 }
 
 #[derive(Debug)]
@@ -50,6 +54,13 @@ impl Config {
         let smtp_auth_code = std::env::var("SMTP_AUTH_CODE").map_err(|_| {
             ConfigError("请设置 SMTP_AUTH_CODE（SMTP 授权码）".into())
         })?;
+        let jwt_secret = std::env::var("JWT_SECRET").map_err(|_| {
+            ConfigError("请设置 JWT_SECRET（HS256 签名密钥，建议 ≥32 字节随机串）".into())
+        })?;
+        let jwt_exp_secs = std::env::var("JWT_EXP_SECS")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(604_800);
         Ok(Self {
             database_url,
             bind_addr: std::env::var("BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:3000".into()),
@@ -58,6 +69,8 @@ impl Config {
             smtp_host,
             smtp_port,
             smtp_auth_code,
+            jwt_secret,
+            jwt_exp_secs,
         })
     }
 

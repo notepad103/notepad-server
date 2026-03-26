@@ -33,8 +33,7 @@ impl smtp_transport {
         let from = Config::global().smtp_from_email.as_str();
         let email = Message::builder()
             .from(
-                from
-                    .parse()
+                from.parse()
                     .map_err(|e| AppError::BadRequest(format!("invalid from email: {e}")))?,
             )
             .to(data
@@ -50,6 +49,7 @@ impl smtp_transport {
 
         Ok(())
     }
+
     pub async fn send_verification_code(email: &str, code: u32) -> Result<(), AppError> {
         let data = to_email {
             to_email: email.to_string(),

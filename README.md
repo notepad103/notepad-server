@@ -41,8 +41,10 @@ cp .env.example .env
 | `REDIS_URL` | 未设置 | 不设则服务能启动，但发验证码会返回业务错误提示未启用 Redis |
 | `SMTP_HOST` | `smtp.qq.com` | SMTP 主机（163 可填 `smtp.163.com`） |
 | `SMTP_PORT` | `465` | SMTP 端口（与 SMTPS/TLS 方式一致） |
+| `JWT_SECRET` | （无默认，必填） | HS256 签名密钥，建议 ≥32 字节的随机串 |
+| `JWT_EXP_SECS` | `604800`（7 天） | 访问令牌过期时间（秒） |
 
-**安全**：不要把真实 `.env` 提交到 Git；仓库内仅保留 `.env.example` 占位。敏感信息泄露后请尽快在邮箱侧**重置授权码**。
+**安全**：不要把真实 `.env` 提交到 Git；仓库内仅保留 `.env.example` 占位。敏感信息泄露后请尽快在邮箱侧**重置授权码**，并**轮换 `JWT_SECRET`**（轮换后已签发令牌全部失效）。
 
 ## 运行
 
@@ -72,8 +74,9 @@ cargo install cargo-watch
 |------|------|------|
 | GET | `/` | 根路径：`{ "ok": true, "db": 1, "redis": "PONG" \| null \| false }` |
 | GET | `/health` | 健康检查，纯文本 `ok` |
-| POST | `/users` | 创建用户，JSON：`username`、`email`、`password`；成功 **201** 及用户信息 |
-| GET | `/users/:id` | 按 id 查询用户 |
+| POST | `/users` | 创建用户，JSON：`username`、`email`、`password`、`verification_code`；成功 **201** 及用户信息 |
+| POST | `/users/login` | 登录，JSON：`email`、`password`；成功 **200** 返回 `access_token`（Bearer）、`user` |
+| GET | `/users/:id` | 查询用户；须在请求头携带 `Authorization: Bearer <access_token>`，且 **只能查询与 token 中用户 id 相同的路径** |
 | POST | `/users/:email/verify` | 用户须已存在；写 Redis `verify:email:{email}`（约 300s）并发验证码邮件。路径里的邮箱建议 URL 编码，例如 `@` 写为 `%40` |
 
 ### 请求示例
@@ -90,6 +93,16 @@ curl -X POST "http://127.0.0.1:3000/users" \
 
 ```bash
 curl -X POST "http://127.0.0.1:3000/users/user%40example.com/verify"
+```
+
+登录并访问受保护接口：
+
+```bash
+TOKEN="$(curl -s -X POST "http://127.0.0.1:3000/users/login" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"secret"}' | jq -r .access_token)"
+
+curl -s "http://127.0.0.1:3000/users/1" -H "Authorization: Bearer $TOKEN"
 ```
 
 ## 项目结构

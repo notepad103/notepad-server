@@ -7,7 +7,9 @@ use crate::handlers;
 use crate::state::AppState;
 
 pub fn router() -> Router<AppState> {
-    Router::new().route("/users", post(handlers::create_user))
-    .route("/users/:id", get(handlers::get_user))
-    .route("/users/:email/verify", post(handlers::send_verification_code))
+    Router::new()
+        .route("/users/login", post(handlers::login))
+        .route("/users", post(handlers::create_user))
+        .route("/users/:id", get(handlers::get_user))
+        .route("/users/:email/verify", post(handlers::send_verification_code))
 }
