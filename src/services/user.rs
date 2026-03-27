@@ -65,25 +65,16 @@ pub async fn create_user(
 /// 邮箱 + 密码登录（当前与库中 `password` 字段明文比对，后续可改为密码哈希）
 pub async fn login(pool: &PgPool, email: &str, password: &str) -> Result<UserResponse, AppError> {
     let row = sqlx::query(
-        "SELECT id, username, email, created_at, password FROM users WHERE email = $1",
+        "SELECT id, username, email, created_at, password FROM users WHERE email = $1 AND password = $2",
     )
     .bind(email)
+    .bind(password)
     .fetch_optional(pool)
     .await?;
 
     let Some(row) = row else {
         return Err(AppError::Unauthorized("邮箱或密码错误".into()));
     };
-
-    let stored: Option<String> = row
-        .try_get::<Option<String>, _>("password")
-        .map_err(|e| AppError::Internal(e.to_string()))?;
-    let Some(ref stored) = stored else {
-        return Err(AppError::Unauthorized("邮箱或密码错误".into()));
-    };
-    if stored != password {
-        return Err(AppError::Unauthorized("邮箱或密码错误".into()));
-    }
 
     Ok(UserResponse {
         id: row.get(0),
