@@ -1,21 +1,51 @@
-//! 可复用的鉴权路由包装，供各模块统一套用
+//! 默认全路由鉴权：`Authorization: Bearer` JWT；
+//! 白名单内的路径不做校验（登录、注册、健康检查等）
 
 use axum::extract::Request;
 use axum::http::header::AUTHORIZATION;
+use axum::http::Method;
 use axum::middleware::Next;
 use axum::response::Response;
-use axum::{Router, middleware};
+use axum::Router;
 
 use crate::auth::verify_token;
 use crate::error::AppError;
 use crate::state::AppState;
 
-/// 给一组路由添加统一鉴权（Bearer JWT）
-pub fn with_auth(router: Router<AppState>) -> Router<AppState> {
-    router.route_layer(middleware::from_fn(require_auth))
+/// 给整棵路由树加默认鉴权（内部按 [`is_public_route`] 放行）
+pub fn with_default_auth(router: Router<AppState>) -> Router<AppState> {
+    router.route_layer(axum::middleware::from_fn(require_auth_unless_public))
 }
 
-async fn require_auth(req: Request, next: Next) -> Result<Response, AppError> {
+pub fn is_public_route(method: &Method, path: &str) -> bool {
+    if *method == Method::GET && (path == "/" || path == "/health") {
+        return true;
+    }
+    if *method == Method::POST && path == "/users/login" {
+        return true;
+    }
+    if *method == Method::POST && path == "/users" {
+        return true;
+    }
+    if *method == Method::POST {
+        let parts: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
+        if parts.len() == 3 && parts[0] == "users" && parts[2] == "verify" {
+            return true;
+        }
+    }
+    false
+}
+
+pub async fn require_auth_unless_public(
+    req: Request,
+    next: Next,
+) -> Result<Response, AppError> {
+    let method = req.method().clone();
+    let path = req.uri().path().to_owned();
+    if is_public_route(&method, &path) {
+        return Ok(next.run(req).await);
+    }
+
     let hdr = req
         .headers()
         .get(AUTHORIZATION)
@@ -25,6 +55,6 @@ async fn require_auth(req: Request, next: Next) -> Result<Response, AppError> {
     let token = hdr
         .strip_prefix("Bearer ")
         .ok_or_else(|| AppError::Unauthorized("须使用 Bearer 令牌".into()))?;
-    let _claims = verify_token(token)?;
+    verify_token(token)?;
     Ok(next.run(req).await)
 }

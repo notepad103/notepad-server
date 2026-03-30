@@ -5,7 +5,7 @@ use axum::extract::FromRequestParts;
 use axum::http::header::AUTHORIZATION;
 use axum::http::request::Parts;
 use chrono::Utc;
-use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use serde::{Deserialize, Serialize};
 
 use crate::config::Config;
@@ -70,5 +70,19 @@ impl FromRequestParts<AppState> for AuthUser {
             .parse()
             .map_err(|_| AppError::Unauthorized("令牌主体无效".into()))?;
         Ok(AuthUser(id))
+    }
+}
+
+pub struct Ddd<'a>(pub &'a str);
+
+#[async_trait]
+impl<'a> FromRequestParts<AppState> for Ddd<'a> {
+    type Rejection = AppError;
+
+    async fn from_request_parts(
+        _parts: &mut Parts,
+        _state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
+        Ok(Ddd("dddd"))
     }
 }

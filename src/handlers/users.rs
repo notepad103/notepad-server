@@ -1,6 +1,6 @@
 //! 用户相关 HTTP 处理（只做提取参数与调用 service）
 
-use crate::auth::{self, AuthUser};
+use crate::auth::{self, AuthUser, Ddd};
 use crate::error::AppError;
 use crate::models::{CreateUserRequest, LoginRequest, LoginResponse};
 use crate::services;
