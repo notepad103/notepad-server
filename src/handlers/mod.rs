@@ -1,7 +1,9 @@
 mod health;
+mod notes;
 mod users;
 
 pub use health::{health, root};
+pub use notes::{create_note, delete_note, get_note, list_notes, update_note};
 pub use users::create_user;
 pub use users::get_user;
 pub use users::login;

@@ -1,5 +1,6 @@
 mod authenticated;
 mod health;
+mod notes;
 mod users;
 
 use axum::Router;
@@ -10,6 +11,7 @@ pub fn routes() -> Router<AppState> {
     authenticated::with_default_auth(
         Router::new()
             .merge(health::router())
+            .merge(notes::router())
             .merge(users::router()),
     )
 }
