@@ -134,12 +134,12 @@ pub async fn update_password(
     .bind(email)
     .bind(password)
     .fetch_optional(pool).await?;
-    let Some(row) = row else {
+    let Some(_row) = row else {
         return Err(AppError::BadRequest("邮箱或密码错误".into()));
     };
     let r = sqlx::query("UPDATE users SET password = $1 WHERE email = $2")
         .bind(new_password)
-        .bind(email)
+        .bind(email.to_string())
         .execute(pool)
         .await?;
     if r.rows_affected() == 0 {
