@@ -1,8 +1,8 @@
 //! 用户相关 HTTP 处理（只做提取参数与调用 service）
 
-use crate::auth::{self, AuthUser, Ddd};
+use crate::auth::{self, AuthUser};
 use crate::error::AppError;
-use crate::models::{CreateUserRequest, LoginRequest, LoginResponse};
+use crate::models::{CreateUserRequest, LoginRequest, LoginResponse, UpdatePasswordRequest};
 use crate::services;
 use crate::state::AppState;
 use axum::{
@@ -52,5 +52,14 @@ pub async fn send_verification_code(
     Path(email): Path<String>,
 ) -> Result<(StatusCode, Json<()>), AppError> {
     services::send_verification_code(state.redis.clone(), &email).await?;
+    Ok((StatusCode::OK, Json(())))
+}
+// 修改密码
+pub async fn update_password(
+    State(state): State<AppState>,
+    Path(email): Path<String>,
+    Json(req): Json<UpdatePasswordRequest>,
+) -> Result<(StatusCode, Json<()>), AppError> {
+    services::update_password(&state.db, &email, &req.password, &req.new_password).await?;
     Ok((StatusCode::OK, Json(())))
 }

@@ -32,3 +32,9 @@ pub struct UserResponse {
     pub email: String,
     pub created_at: DateTime<Utc>,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct UpdatePasswordRequest {
+    pub password: String,
+    pub new_password: String,
+}

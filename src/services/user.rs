@@ -123,3 +123,28 @@ pub async fn send_verification_code(
 
     Ok(())
 }
+
+pub async fn update_password(
+    pool: &PgPool,
+    email: &str,
+    password: &str,
+    new_password: &str,
+) -> Result<(), AppError> {
+    let row = sqlx::query("SELECT id, username, email, created_at, password FROM users WHERE email = $1 AND password = $2")
+    .bind(email)
+    .bind(password)
+    .fetch_optional(pool).await?;
+    let Some(row) = row else {
+        return Err(AppError::BadRequest("邮箱或密码错误".into()));
+    };
+    let r = sqlx::query("UPDATE users SET password = $1 WHERE email = $2")
+        .bind(new_password)
+        .bind(email)
+        .execute(pool)
+        .await?;
+    if r.rows_affected() == 0 {
+        return Err(AppError::BadRequest("用户不存在".into()));
+    }
+
+    Ok(())
+}
