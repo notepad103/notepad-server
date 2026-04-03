@@ -134,7 +134,7 @@ pub async fn update_password(
     .bind(email)
     .bind(password)
     .fetch_optional(pool).await?;
-    let Some(_row) = row else {
+    let Some(_row ) = row else {
         return Err(AppError::BadRequest("邮箱或密码错误".into()));
     };
     let r = sqlx::query("UPDATE users SET password = $1 WHERE email = $2")

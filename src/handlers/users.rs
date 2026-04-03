@@ -54,6 +54,7 @@ pub async fn send_verification_code(
     services::send_verification_code(state.redis.clone(), &email).await?;
     Ok((StatusCode::OK, Json(())))
 }
+
 // 修改密码
 pub async fn update_password(
     State(state): State<AppState>,
