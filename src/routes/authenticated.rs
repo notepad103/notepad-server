@@ -27,6 +27,9 @@ pub fn is_public_route(method: &Method, path: &str) -> bool {
     if *method == Method::POST && path == "/users" {
         return true;
     }
+    if *method == Method::PUT && path.starts_with("/users/") && path.ends_with("/password") {
+        return true;
+    }
     if *method == Method::POST {
         let parts: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
         if parts.len() == 3 && parts[0] == "users" && parts[2] == "verify" {
