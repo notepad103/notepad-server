@@ -54,6 +54,15 @@ pub async fn create_user(
     let email: String = row.get(2);
     let created_at: chrono::DateTime<Utc> = row.get(3);
 
+    let now_ms = Utc::now().timestamp_millis();
+    sqlx::query(
+        "INSERT INTO sections (user_id, id, label, sort_order, created_at) VALUES ($1, 'all', '全部', 0, $2)",
+    )
+    .bind(id)
+    .bind(now_ms)
+    .execute(pool)
+    .await?;
+
     Ok(UserResponse {
         id,
         username,
