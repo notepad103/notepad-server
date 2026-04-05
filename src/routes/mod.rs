@@ -1,6 +1,7 @@
 mod authenticated;
 mod health;
 mod notes;
+mod sections;
 mod users;
 
 use axum::Router;
@@ -12,6 +13,7 @@ pub fn routes() -> Router<AppState> {
         Router::new()
             .merge(health::router())
             .merge(notes::router())
+            .merge(sections::router())
             .merge(users::router()),
     )
 }

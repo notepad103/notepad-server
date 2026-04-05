@@ -1,29 +1,14 @@
-struct Con {
-    url: &'static str,
+enum Color {
+    Red { color: i32 },
+    Green(i32),
+    Blue(i32),
 }
 
-#[allow(dead_code)]
-const CONFIG: Con = Con {
-    url: "1234567890@qq.com",
-};
-
-
-
-
-
-// fn main() {
-//     let result = 'outer: loop {
-//         println!("Outer loop");
-
-//         'inner: loop {
-//             println!("Inner loop-1");
-
-//             loop {
-//                 println!("Inner loop-2");
-//                 break 'outer 20;
-//             } //inner-2·loop.ends
-//         } //inner-1 loop ends
-//     }; //outer loop.ends
-
-//     println!("Exited outer loop with result=.{}", result);
-// }
+fn main() {
+    let a = Color::Red { color: 10 };
+    match a {
+        Color::Red { color: c @ 1..1000 } => println!("Red: {}", c),
+        Color::Red { color: c @ 1..100 } => println!("Red: {}", c),
+        _ => println!("Other"),
+    };
+}
