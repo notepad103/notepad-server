@@ -2,7 +2,10 @@
 
 use crate::auth::{self, AuthUser};
 use crate::error::AppError;
-use crate::models::{CreateUserRequest, LoginRequest, LoginResponse, UpdatePasswordRequest};
+use crate::models::{
+    CreateUserRequest, LoginRequest, LoginResponse, SendVerificationCodeRequest,
+    UpdatePasswordRequest,
+};
 use crate::services;
 use crate::state::AppState;
 use axum::{
@@ -23,7 +26,7 @@ pub async fn login(
     State(state): State<AppState>,
     Json(req): Json<LoginRequest>,
 ) -> Result<(StatusCode, Json<LoginResponse>), AppError> {
-    let user = services::login(&state.db, &req.email, &req.password).await?;
+    let user = services::login(&state.db, state.redis.clone(),&req.email, &req.password).await?;
     let access_token = auth::sign_token(user.id)?;
     Ok((
         StatusCode::OK,
@@ -49,18 +52,17 @@ pub async fn get_user(
 
 pub async fn send_verification_code(
     State(state): State<AppState>,
-    Path(email): Path<String>,
+    Json(req): Json<SendVerificationCodeRequest>,
 ) -> Result<(StatusCode, Json<()>), AppError> {
-    services::send_verification_code(state.redis.clone(), &email).await?;
+    services::send_verification_code(state.redis.clone(), &req.email).await?;
     Ok((StatusCode::OK, Json(())))
 }
 
 // 修改密码
 pub async fn update_password(
     State(state): State<AppState>,
-    Path(email): Path<String>,
     Json(req): Json<UpdatePasswordRequest>,
 ) -> Result<(StatusCode, Json<()>), AppError> {
-    services::update_password(&state.db, &email, &req.password, &req.new_password).await?;
+    services::update_password(&state.db, &req.email, &req.password, &req.new_password).await?;
     Ok((StatusCode::OK, Json(())))
 }

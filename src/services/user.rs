@@ -1,5 +1,6 @@
 //! 用户相关业务逻辑（与 HTTP 无关）
 
+use crate::config::Config;
 use crate::utils::email;
 use chrono::Utc;
 use rand::Rng;
@@ -72,7 +73,12 @@ pub async fn create_user(
 }
 
 /// 邮箱 + 密码登录（当前与库中 `password` 字段明文比对，后续可改为密码哈希）
-pub async fn login(pool: &PgPool, email: &str, password: &str) -> Result<UserResponse, AppError> {
+pub async fn login(
+    pool: &PgPool,
+    redis: Option<ConnectionManager>,
+    email: &str,
+    password: &str,
+) -> Result<UserResponse, AppError> {
     let row = sqlx::query(
         "SELECT id, username, email, created_at, password FROM users WHERE email = $1 AND password = $2",
     )
@@ -85,12 +91,26 @@ pub async fn login(pool: &PgPool, email: &str, password: &str) -> Result<UserRes
         return Err(AppError::Unauthorized("邮箱或密码错误".into()));
     };
 
-    Ok(UserResponse {
+    let user_info = UserResponse {
         id: row.get(0),
         username: row.get(1),
         email: row.get(2),
         created_at: row.get(3),
-    })
+    };
+
+    let Some(mut redis_service) = redis else {
+        return Err(AppError::BadRequest(
+            "验证码服务未启用（请配置 REDIS_URL）".into(),
+        ));
+    };
+    let key: String = format!("user:login:{}", user_info.id);
+    let c = Config::global();
+    
+    let _: () = redis_service
+        .set_ex(&key, user_info.to_string(), c.jwt_exp_secs as u64)
+        .await?;
+
+    Ok(user_info)
 }
 
 pub async fn get_user(pool: &PgPool, id: i32) -> Result<UserResponse, AppError> {
@@ -143,7 +163,7 @@ pub async fn update_password(
     .bind(email)
     .bind(password)
     .fetch_optional(pool).await?;
-    let Some(_row ) = row else {
+    let Some(_row) = row else {
         return Err(AppError::BadRequest("邮箱或密码错误".into()));
     };
     let r = sqlx::query("UPDATE users SET password = $1 WHERE email = $2")
