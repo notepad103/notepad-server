@@ -98,17 +98,25 @@ pub async fn login(
         created_at: row.get(3),
     };
 
-    let Some(mut redis_service) = redis else {
-        return Err(AppError::BadRequest(
-            "验证码服务未启用（请配置 REDIS_URL）".into(),
-        ));
-    };
     let key: String = format!("user:login:{}", user_info.id);
-    let c = Config::global();
-    
-    let _: () = redis_service
-        .set_ex(&key, user_info.to_string(), c.jwt_exp_secs as u64)
-        .await?;
+    let user_cache_value = user_info.to_string();
+    let ttl_secs = Config::global().jwt_exp_secs;
+
+    if let Some(mut redis_service) = redis {
+        tokio::spawn(async move {
+            let write_result: redis::RedisResult<()> = redis_service
+                .set_ex(&key, user_cache_value, ttl_secs)
+                .await;
+            if let Err(err) = write_result {
+                eprintln!("login cache write failed for user {}: {}", user_info.id, err);
+            }
+        });
+    } else {
+        eprintln!(
+            "login cache skipped for user {}: REDIS_URL not configured",
+            user_info.id
+        );
+    }
 
     Ok(user_info)
 }
