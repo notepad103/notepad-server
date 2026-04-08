@@ -26,7 +26,7 @@ pub struct CreateUserRequest {
     pub verification_code: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct UserResponse {
     pub id: i32,
     pub username: String,

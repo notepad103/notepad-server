@@ -99,7 +99,8 @@ pub async fn login(
     };
 
     let key: String = format!("user:login:{}", user_info.id);
-    let user_cache_value = user_info.to_string();
+    let user_cache_value = serde_json::to_string(&user_info)
+        .map_err(|e| AppError::Internal(format!("serialize user cache failed: {e}")))?;
     let ttl_secs = Config::global().jwt_exp_secs;
 
     if let Some(mut redis_service) = redis {
