@@ -13,12 +13,16 @@ use crate::error::AppError;
 use crate::state::AppState;
 
 /// 给整棵路由树加默认鉴权（内部按 [`is_public_route`] 放行）
+///
+/// 使用 [`Router::layer`] 而不是 [`Router::route_layer`]：
+/// `route_layer` 往往只在「已经匹配到某条路由」之后才跑；未匹配（404）或某些边界情况下中间件不会执行，
+/// 调试时就会误以为「没打到中间件」。
 pub fn with_default_auth(router: Router<AppState>) -> Router<AppState> {
-    router.route_layer(axum::middleware::from_fn(require_auth_unless_public))
+    router.layer(axum::middleware::from_fn(require_auth_unless_public))
 }
 
 pub fn is_public_route(method: &Method, path: &str) -> bool {
-    if *method == Method::GET && (path == "/" || path == "/health") {
+    if *method == Method::GET && (path == "/" || path == "/health" || path == "/health/notepad") {
         return true;
     }
     if *method == Method::POST && path == "/users/login" {
@@ -32,7 +36,8 @@ pub fn is_public_route(method: &Method, path: &str) -> bool {
     }
     if *method == Method::POST {
         let parts: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
-        if parts.len() == 3 && parts[0] == "users" && parts[2] == "verify" {
+        // `/users/verify` → ["users", "verify"]
+        if parts.len() == 2 && parts[0] == "users" && parts[1] == "verify" {
             return true;
         }
     }

@@ -9,4 +9,5 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(handlers::root))
         .route("/health", get(handlers::health))
+        .route("/health/notepad", get(handlers::notepad_fingerprint))
 }

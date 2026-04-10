@@ -1,4 +1,4 @@
-//! notepad 应用库入口，供 main 与测试使用
+//! notepad 应用库入口，供 main 使用
 
 mod auth;
 mod config;

@@ -13,6 +13,7 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
 };
+use serde_json::json;
 
 pub async fn create_user(
     State(state): State<AppState>,
@@ -26,7 +27,7 @@ pub async fn login(
     State(state): State<AppState>,
     Json(req): Json<LoginRequest>,
 ) -> Result<(StatusCode, Json<LoginResponse>), AppError> {
-    let user = services::login(&state.db, state.redis.clone(),&req.email, &req.password).await?;
+    let user = services::login(&state.db, state.redis.clone(), &req.email, &req.password).await?;
     let access_token = auth::sign_token(user.id)?;
     Ok((
         StatusCode::OK,
@@ -40,22 +41,22 @@ pub async fn login(
 
 pub async fn get_user(
     AuthUser(auth_id): AuthUser,
-    State(state): State<AppState>,
     Path(id): Path<i32>,
 ) -> Result<(StatusCode, Json<crate::models::UserResponse>), AppError> {
     if auth_id != id {
         return Err(AppError::Forbidden("只能查看本人的用户信息".into()));
     }
-    let user = services::get_user(&state.db, id).await?;
+    let user = services::get_user(id).await?;
     Ok((StatusCode::OK, Json(user)))
 }
 
 pub async fn send_verification_code(
     State(state): State<AppState>,
     Json(req): Json<SendVerificationCodeRequest>,
-) -> Result<(StatusCode, Json<()>), AppError> {
+) -> Result<(StatusCode, Json<serde_json::Value>), AppError> {
     services::send_verification_code(state.redis.clone(), &req.email).await?;
-    Ok((StatusCode::OK, Json(())))
+    let body = json!({ "message": "验证码发送成功" });
+    Ok((StatusCode::OK, Json(body)))
 }
 
 // 修改密码

@@ -11,9 +11,10 @@ use crate::state::AppState;
 pub fn routes() -> Router<AppState> {
     authenticated::with_default_auth(
         Router::new()
+            // 用户相关路径优先合并，降低与其它子路由在实现细节上的匹配顺序差异
+            .merge(users::router())
             .merge(health::router())
             .merge(notes::router())
-            .merge(sections::router())
-            .merge(users::router()),
+            .merge(sections::router()),
     )
 }

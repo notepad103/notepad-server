@@ -1,7 +1,7 @@
 //! 用户相关业务逻辑（与 HTTP 无关）
 
 use crate::config::Config;
-use crate::utils::email;
+use crate::utils::{email, user};
 use chrono::Utc;
 use rand::Rng;
 use redis::AsyncCommands;
@@ -105,11 +105,13 @@ pub async fn login(
 
     if let Some(mut redis_service) = redis {
         tokio::spawn(async move {
-            let write_result: redis::RedisResult<()> = redis_service
-                .set_ex(&key, user_cache_value, ttl_secs)
-                .await;
+            let write_result: redis::RedisResult<()> =
+                redis_service.set_ex(&key, user_cache_value, ttl_secs).await;
             if let Err(err) = write_result {
-                eprintln!("login cache write failed for user {}: {}", user_info.id, err);
+                eprintln!(
+                    "login cache write failed for user {}: {}",
+                    user_info.id, err
+                );
             }
         });
     } else {
@@ -122,18 +124,12 @@ pub async fn login(
     Ok(user_info)
 }
 
-pub async fn get_user(pool: &PgPool, id: i32) -> Result<UserResponse, AppError> {
-    let row = sqlx::query("SELECT id, username, email, created_at FROM users WHERE id = $1")
-        .bind(id)
-        .fetch_one(pool)
-        .await?;
-
-    Ok(UserResponse {
-        id: row.get(0),
-        username: row.get(1),
-        email: row.get(2),
-        created_at: row.get(3),
-    })
+pub async fn get_user(id: i32) -> Result<UserResponse, AppError> {
+    if let Some(user_info) = user::get_user(id).await {
+        Ok(user_info)
+    } else {
+        Err(AppError::BadRequest("用户不存在".into()))
+    }
 }
 
 /// 发送验证码：将验证码写入 Redis（`verify:email:{email}`），默认 300 秒过期，并发送邮件。
