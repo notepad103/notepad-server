@@ -56,6 +56,11 @@ pub async fn get_user_db(user_id: i32) -> Option<UserResponse> {
     .fetch_one(&pg)
     .await
     .ok()?;
+    // 如果没有查询到信息，则提前返回 None
+    if row.is_empty() {
+        return None;
+    }
+    
     let user_info = UserResponse {
         id: row.get(0),
         username: row.get(1),
