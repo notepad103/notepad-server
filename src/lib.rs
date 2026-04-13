@@ -17,6 +17,19 @@ pub use state::AppState;
 
 use redis::aio::ConnectionManager;
 use sqlx::postgres::PgPoolOptions;
+use tower_http::trace::TraceLayer;
+use tracing::info;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+
+/// 初始化 tracing-subscriber，从 RUST_LOG 环境变量读取过滤级别。
+/// 若 RUST_LOG 未设置，默认只打印本 crate 的 INFO 及以上日志。
+pub fn init_tracing() {
+    let default_filter = format!("{}=info", env!("CARGO_PKG_NAME"));
+    tracing_subscriber::registry()
+        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| default_filter.into()))
+        .with(tracing_subscriber::fmt::layer())
+        .init();
+}
 
 /// 构建并运行 HTTP 服务（使用全局 Config，需先调用 Config::init_global()）
 pub async fn run() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -40,10 +53,12 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     };
 
     let state = AppState::new(pool, redis);
-    let app = routes::routes().with_state(state);
+    let app = routes::routes()
+        .layer(TraceLayer::new_for_http())
+        .with_state(state);
 
     let listener = tokio::net::TcpListener::bind(&config.bind_addr).await?;
-    println!("HTTP 服务: http://{}", config.bind_addr);
+    info!("HTTP 服务启动: http://{}", config.bind_addr);
     axum::serve(listener, app).await?;
     Ok(())
 }

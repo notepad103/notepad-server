@@ -6,6 +6,7 @@ use axum::{
     Json,
 };
 use serde_json::json;
+use tracing::error;
 
 /// 应用层错误，可映射为 HTTP 状态码与 JSON body
 #[derive(Debug)]
@@ -47,6 +48,9 @@ impl AppError {
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let status = self.status_code();
+        if status == StatusCode::INTERNAL_SERVER_ERROR {
+            error!(error = self.message(), "internal server error");
+        }
         let body = Json(json!({ "error": self.message() }));
         (status, body).into_response()
     }

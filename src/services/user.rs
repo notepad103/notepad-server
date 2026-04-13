@@ -7,6 +7,7 @@ use rand::Rng;
 use redis::AsyncCommands;
 use redis::aio::ConnectionManager;
 use sqlx::Row;
+use tracing::{info, warn};
 
 use crate::error::AppError;
 use crate::models::{CreateUserRequest, UserResponse};
@@ -54,6 +55,7 @@ pub async fn create_user(
     let username: String = row.get(1);
     let email: String = row.get(2);
     let created_at: chrono::DateTime<Utc> = row.get(3);
+    info!(user_id = id, email = %email, "user registered");
 
     let now_ms = Utc::now().timestamp_millis();
     sqlx::query(
@@ -97,6 +99,7 @@ pub async fn login(
         email: row.get(2),
         created_at: row.get(3),
     };
+    info!(user_id = user_info.id, "user logged in");
 
     let key: String = format!("user:login:{}", user_info.id);
     let user_cache_value = serde_json::to_string(&user_info)
@@ -108,17 +111,11 @@ pub async fn login(
             let write_result: redis::RedisResult<()> =
                 redis_service.set_ex(&key, user_cache_value, ttl_secs).await;
             if let Err(err) = write_result {
-                eprintln!(
-                    "login cache write failed for user {}: {}",
-                    user_info.id, err
-                );
+                warn!(user_id = user_info.id, error = %err, "login cache write failed");
             }
         });
     } else {
-        eprintln!(
-            "login cache skipped for user {}: REDIS_URL not configured",
-            user_info.id
-        );
+        warn!(user_id = user_info.id, "login cache skipped: REDIS_URL not configured");
     }
 
     Ok(user_info)

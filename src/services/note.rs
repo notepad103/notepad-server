@@ -1,5 +1,6 @@
 use chrono::Utc;
 use sqlx::{PgPool, Row};
+use tracing::info;
 
 use crate::error::AppError;
 use crate::models::{CreateNoteRequest, NoteResponse, NoteSummary, UpdateNoteRequest};
@@ -35,7 +36,7 @@ pub async fn create_note(
     .fetch_one(pool)
     .await?;
 
-    Ok(NoteResponse {
+    let note = NoteResponse {
         id: row.get(0),
         user_id: row.get(1),
         title: row.get(2),
@@ -44,7 +45,9 @@ pub async fn create_note(
         section_id: row.get(5),
         created_at: row.get(6),
         updated_at: row.get(7),
-    })
+    };
+    info!(note_id = %note.id, user_id = note.user_id, "note created");
+    Ok(note)
 }
 
 pub async fn list_notes(pool: &PgPool, user_id: i32) -> Result<Vec<NoteSummary>, AppError> {
@@ -148,5 +151,6 @@ pub async fn delete_note(pool: &PgPool, user_id: i32, note_id: &str) -> Result<(
     if r.rows_affected() == 0 {
         return Err(AppError::BadRequest("笔记不存在".into()));
     }
+    info!(note_id = %note_id, user_id = user_id, "note deleted");
     Ok(())
 }

@@ -3,5 +3,6 @@
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     notepad::Config::init_global()?;
+    notepad::init_tracing();
     notepad::run().await
 }
