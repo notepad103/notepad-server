@@ -24,7 +24,6 @@ pub fn with_default_auth(router: Router<AppState>) -> Router<AppState> {
 
 pub fn is_public_route(method: &Method, path: &str) -> bool {
     let method_map = HashMap::from([
-        (Method::GET, vec!["/", "/health", "/health/notepad"]),
         (Method::POST, vec!["/users", "/users/login", "/users/verify"]),
         (Method::PUT, vec!["/users/password"]),
     ]);
