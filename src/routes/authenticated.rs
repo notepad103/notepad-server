@@ -7,6 +7,7 @@ use axum::http::Method;
 use axum::middleware::Next;
 use axum::response::Response;
 use axum::Router;
+use std::collections::HashMap;
 
 use crate::auth::verify_token;
 use crate::error::AppError;
@@ -22,26 +23,12 @@ pub fn with_default_auth(router: Router<AppState>) -> Router<AppState> {
 }
 
 pub fn is_public_route(method: &Method, path: &str) -> bool {
-    if *method == Method::GET && (path == "/" || path == "/health" || path == "/health/notepad") {
-        return true;
-    }
-    if *method == Method::POST && path == "/users/login" {
-        return true;
-    }
-    if *method == Method::POST && path == "/users" {
-        return true;
-    }
-    if *method == Method::PUT && path.starts_with("/users/") && path.ends_with("/password") {
-        return true;
-    }
-    if *method == Method::POST {
-        let parts: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
-        // `/users/verify` → ["users", "verify"]
-        if parts.len() == 2 && parts[0] == "users" && parts[1] == "verify" {
-            return true;
-        }
-    }
-    false
+    let method_map = HashMap::from([
+        (Method::GET, vec!["/", "/health", "/health/notepad"]),
+        (Method::POST, vec!["/users", "/users/login", "/users/verify"]),
+        (Method::PUT, vec!["/users/password"]),
+    ]);
+    method_map.get(method).unwrap_or(&vec![]).contains(&path)
 }
 
 pub async fn require_auth_unless_public(
