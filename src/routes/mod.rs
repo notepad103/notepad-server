@@ -4,9 +4,11 @@ mod notes;
 mod sections;
 mod users;
 
-use axum::Router;
+use axum::{Router, middleware::map_response};
 
+use crate::response::wrap_response;
 use crate::state::AppState;
+
 /// 聚合所有路由（默认鉴权，公开路径见 `authenticated::is_public_route`）
 pub fn routes() -> Router<AppState> {
     authenticated::with_default_auth(
@@ -17,4 +19,5 @@ pub fn routes() -> Router<AppState> {
             .merge(notes::router())
             .merge(sections::router()),
     )
+    .layer(map_response(wrap_response))
 }

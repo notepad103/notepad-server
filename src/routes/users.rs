@@ -14,5 +14,5 @@ pub fn router() -> Router<AppState> {
         .route("/users/verify", post(handlers::send_verification_code))
         .route("/users/password", put(handlers::update_password))
         .route("/users", post(handlers::create_user))
-        .route("/users/:id", get(handlers::get_user))
+        .route("/users/info/:id", get(handlers::get_user))
 }
