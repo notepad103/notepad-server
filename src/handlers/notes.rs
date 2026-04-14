@@ -1,12 +1,12 @@
 use axum::{
     Json,
     extract::{Path, State},
-    http::StatusCode,
 };
 
 use crate::auth::AuthUser;
 use crate::error::AppError;
 use crate::models::{CreateNoteRequest, NoteResponse, NoteSummary, UpdateNoteRequest};
+use crate::response::ApiResponse;
 use crate::services;
 use crate::state::AppState;
 
@@ -14,26 +14,26 @@ pub async fn create_note(
     AuthUser(user_id): AuthUser,
     State(state): State<AppState>,
     Json(req): Json<CreateNoteRequest>,
-) -> Result<(StatusCode, Json<NoteResponse>), AppError> {
+) -> Result<ApiResponse<NoteResponse>, AppError> {
     let note = services::create_note(&state.db, user_id, req).await?;
-    Ok((StatusCode::CREATED, Json(note)))
+    Ok(ApiResponse(note))
 }
 
 pub async fn list_notes(
     AuthUser(user_id): AuthUser,
     State(state): State<AppState>,
-) -> Result<(StatusCode, Json<Vec<NoteSummary>>), AppError> {
+) -> Result<ApiResponse<Vec<NoteSummary>>, AppError> {
     let notes = services::list_notes(&state.db, user_id).await?;
-    Ok((StatusCode::OK, Json(notes)))
+    Ok(ApiResponse(notes))
 }
 
 pub async fn get_note(
     AuthUser(user_id): AuthUser,
     State(state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<(StatusCode, Json<NoteResponse>), AppError> {
+) -> Result<ApiResponse<NoteResponse>, AppError> {
     let note = services::get_note(&state.db, user_id, &id).await?;
-    Ok((StatusCode::OK, Json(note)))
+    Ok(ApiResponse(note))
 }
 
 pub async fn update_note(
@@ -41,16 +41,16 @@ pub async fn update_note(
     State(state): State<AppState>,
     Path(id): Path<String>,
     Json(req): Json<UpdateNoteRequest>,
-) -> Result<(StatusCode, Json<NoteResponse>), AppError> {
+) -> Result<ApiResponse<NoteResponse>, AppError> {
     let note = services::update_note(&state.db, user_id, &id, req).await?;
-    Ok((StatusCode::OK, Json(note)))
+    Ok(ApiResponse(note))
 }
 
 pub async fn delete_note(
     AuthUser(user_id): AuthUser,
     State(state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<StatusCode, AppError> {
+) -> Result<ApiResponse<()>, AppError> {
     services::delete_note(&state.db, user_id, &id).await?;
-    Ok(StatusCode::NO_CONTENT)
+    Ok(ApiResponse(()))
 }

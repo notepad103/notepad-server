@@ -51,7 +51,7 @@ impl IntoResponse for AppError {
         if status == StatusCode::INTERNAL_SERVER_ERROR {
             error!(error = self.message(), "internal server error");
         }
-        let body = Json(json!({ "error": self.message() }));
+        let body = Json(json!({ "code": status.as_u16(), "error": self.message() }));
         (status, body).into_response()
     }
 }

@@ -5,6 +5,7 @@ mod config;
 mod error;
 mod handlers;
 mod models;
+mod response;
 mod routes;
 mod services;
 mod state;
