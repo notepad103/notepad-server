@@ -3,4 +3,4 @@
 pub mod user;
 pub mod email;
 pub mod get_html;
-pub mod open_ai_model;
+pub mod openai_model;

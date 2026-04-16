@@ -1,5 +1,5 @@
 use crate::error::AppError;
-use crate::utils::open_ai_model::{completion, completion_stream};
+use crate::utils::openai_model::{completion, completion_stream};
 use readabilityrs::Readability;
 
 pub async fn get_html(url: &str) -> Result<String, AppError> {
