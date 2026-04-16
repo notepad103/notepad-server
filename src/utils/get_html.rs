@@ -1,4 +1,5 @@
 use crate::error::AppError;
+use crate::utils::open_ai_model::completion;
 use readabilityrs::Readability;
 
 pub async fn get_html(url: &str) -> Result<String, AppError> {
@@ -8,8 +9,13 @@ pub async fn get_html(url: &str) -> Result<String, AppError> {
     let readability = Readability::new(&raw_html, Some(url), None)
         .map_err(|e| AppError::Internal(format!("readability init failed: {e}")))?;
 
-    match readability.parse() {
-        Some(article) => Ok(article.content.unwrap_or(raw_html)),
-        None => Ok(raw_html),
-    }
+    let content = match readability.parse() {
+        Some(article) => article.content.unwrap_or(raw_html),
+        None => raw_html,
+    };
+
+    let question = format!("请从以下 HTML 文本中提取出正文内容：\n{}", content);
+    let extract_text = completion(&question).await?;
+    println!("content: {}", extract_text);
+    Ok(extract_text)
 }
