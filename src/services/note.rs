@@ -3,7 +3,10 @@ use sqlx::{PgPool, Row};
 use tracing::info;
 
 use crate::error::AppError;
-use crate::models::{CreateNoteRequest, NoteResponse, NoteSummary, UpdateNoteRequest};
+use crate::models::{
+    CreateNoteRequest, FetchHtmlResponse, NoteResponse, NoteSummary, UpdateNoteRequest,
+};
+use crate::utils::get_html;
 
 fn gen_note_id(user_id: i32) -> String {
     let ts = Utc::now().timestamp_millis();
@@ -73,7 +76,11 @@ pub async fn list_notes(pool: &PgPool, user_id: i32) -> Result<Vec<NoteSummary>,
         .collect())
 }
 
-pub async fn get_note(pool: &PgPool, user_id: i32, note_id: &str) -> Result<NoteResponse, AppError> {
+pub async fn get_note(
+    pool: &PgPool,
+    user_id: i32,
+    note_id: &str,
+) -> Result<NoteResponse, AppError> {
     let row = sqlx::query(
         "SELECT id, user_id, title, preview, body, section_id, created_at, updated_at
          FROM notes
@@ -153,4 +160,9 @@ pub async fn delete_note(pool: &PgPool, user_id: i32, note_id: &str) -> Result<(
     }
     info!(note_id = %note_id, user_id = user_id, "note deleted");
     Ok(())
+}
+
+pub async fn fetch_html(url: &str) -> Result<FetchHtmlResponse, AppError> {
+    let html = get_html::get_html(url).await?;
+    Ok(FetchHtmlResponse { html })
 }

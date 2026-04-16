@@ -6,7 +6,10 @@ use axum::{
 
 use crate::auth::AuthUser;
 use crate::error::AppError;
-use crate::models::{CreateNoteRequest, NoteResponse, NoteSummary, UpdateNoteRequest};
+use crate::models::{
+    CreateNoteRequest, FetchHtmlRequest, FetchHtmlResponse, NoteResponse, NoteSummary,
+    UpdateNoteRequest,
+};
 use crate::services;
 use crate::state::AppState;
 
@@ -53,4 +56,11 @@ pub async fn delete_note(
 ) -> Result<StatusCode, AppError> {
     services::delete_note(&state.db, user_id, &id).await?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+pub async fn fetch_html(
+    Json(req): Json<FetchHtmlRequest>,
+) -> Result<(StatusCode, Json<FetchHtmlResponse>), AppError> {
+    let response = services::fetch_html(&req.url).await?;
+    Ok((StatusCode::OK, Json(response)))
 }

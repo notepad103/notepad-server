@@ -13,6 +13,10 @@ pub fn router() -> Router<AppState> {
             post(handlers::create_note).get(handlers::list_notes),
         )
         .route(
+            "/notes/fetch-html",
+            post(handlers::fetch_html),
+        )
+        .route(
             "/notes/:id",
             get(handlers::get_note)
                 .put(handlers::update_note)

@@ -20,3 +20,5 @@ argon2 = { version = "0.5.3", features = ["std"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tower-http = { version = "0.6", features = ["trace"] }
+reqwest = { version = "0.13.2", features = ["blocking"] }
+readabilityrs = "0.1"

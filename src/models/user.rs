@@ -52,3 +52,4 @@ pub struct UpdatePasswordRequest {
     pub password: String,
     pub new_password: String,
 }
+

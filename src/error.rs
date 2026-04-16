@@ -23,6 +23,12 @@ pub enum AppError {
     Forbidden(String),
 }
 
+impl std::fmt::Display for AppError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.message())
+    }
+}
+
 impl AppError {
     pub fn status_code(&self) -> StatusCode {
         match self {
@@ -76,5 +82,11 @@ impl From<redis::RedisError> for AppError {
 impl From<jsonwebtoken::errors::Error> for AppError {
     fn from(_: jsonwebtoken::errors::Error) -> Self {
         AppError::Unauthorized("无效或过期的令牌".into())
+    }
+}
+
+impl From<reqwest::Error> for AppError {
+    fn from(e: reqwest::Error) -> Self {
+        AppError::Internal(e.to_string())
     }
 }

@@ -36,3 +36,13 @@ pub struct NoteResponse {
     pub created_at: i64,
     pub updated_at: i64,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct FetchHtmlRequest {
+    pub url: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct FetchHtmlResponse {
+    pub html: String,
+}
