@@ -54,7 +54,10 @@ pub async fn completion_stream(question: &str) -> Result<String, AppError> {
         .map_err(|e| AppError::Internal(format!("llm stream chunk failed: {e}")))?
     {
         match chunk {
-            StreamedAssistantContent::Text(text) => print!("{text}"),
+            StreamedAssistantContent::Text(text) => {
+                    print!("{text}");
+                    let _ = std::io::Write::flush(&mut std::io::stdout());
+                }
             StreamedAssistantContent::ToolCallDelta { .. } => { /* handle tool call deltas */ }
             StreamedAssistantContent::Final(_res) => { /* handle final response */ }
             _ => {}

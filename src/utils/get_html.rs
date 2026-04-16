@@ -16,7 +16,9 @@ pub async fn get_html(url: &str) -> Result<String, AppError> {
 
     let question = format!("请从以下 HTML 文本中提取出正文内容：\n{}", content);
     // let extract_text = completion(&question).await?;
-    completion_stream(&question).await?;
+    tokio::spawn(async move {
+        completion_stream(&question).await;
+    });
     // println!("content: {}", extract_text);
     Ok("".to_string())
 }
