@@ -11,6 +11,20 @@ pub async fn wrap_response(response: Response<Body>) -> Response<Body> {
         return response;
     }
 
+    let should_wrap_json = response
+        .headers()
+        .get(header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .map(|value| {
+            let mime = value.split(';').next().unwrap_or("").trim();
+            mime == "application/json" || mime.ends_with("+json")
+        })
+        .unwrap_or(false);
+
+    if !should_wrap_json {
+        return response;
+    }
+
     let (mut parts, body) = response.into_parts();
 
     let bytes = axum::body::to_bytes(body, usize::MAX)

@@ -1,10 +1,9 @@
-use futures::TryStreamExt;
 use rig_core::{
-    client::ProviderClient,
-    client::completion::CompletionClient,
+    client::{ProviderClient, completion::CompletionClient},
     completion::{CompletionModel, CompletionRequest},
     providers::openai,
-    streaming::StreamedAssistantContent,
+    providers::openai::completion::streaming::StreamingCompletionResponse as OpenAiStreamingResponse,
+    streaming::StreamingCompletionResponse,
 };
 use std::sync::LazyLock;
 
@@ -42,26 +41,13 @@ pub async fn completion(question: &str) -> Result<String, AppError> {
     Ok(text)
 }
 
-pub async fn completion_stream(question: &str) -> Result<String, AppError> {
+pub async fn completion_stream(
+    question: &str,
+) -> Result<StreamingCompletionResponse<OpenAiStreamingResponse>, AppError> {
     let request = get_request(question);
-    let mut answer = DEEPSEEK_REASONER
+    let answer = DEEPSEEK_REASONER
         .stream(request)
         .await
         .map_err(|e| AppError::Internal(format!("llm stream failed: {e}")))?;
-    while let Some(chunk) = answer
-        .try_next()
-        .await
-        .map_err(|e| AppError::Internal(format!("llm stream chunk failed: {e}")))?
-    {
-        match chunk {
-            StreamedAssistantContent::Text(text) => {
-                    print!("{text}");
-                    let _ = std::io::Write::flush(&mut std::io::stdout());
-                }
-            StreamedAssistantContent::ToolCallDelta { .. } => { /* handle tool call deltas */ }
-            StreamedAssistantContent::Final(_res) => { /* handle final response */ }
-            _ => {}
-        }
-    }
-    Ok("".to_string())
+    Ok(answer)
 }

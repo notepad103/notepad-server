@@ -3,10 +3,12 @@ use sqlx::{PgPool, Row};
 use tracing::info;
 
 use crate::error::AppError;
-use crate::models::{
-    CreateNoteRequest, FetchHtmlResponse, NoteResponse, NoteSummary, UpdateNoteRequest,
-};
+use crate::models::{CreateNoteRequest, NoteResponse, NoteSummary, UpdateNoteRequest};
 use crate::utils::get_html;
+use rig_core::{
+    providers::openai::completion::streaming::StreamingCompletionResponse as OpenAiStreamingResponse,
+    streaming::StreamingCompletionResponse,
+};
 
 fn gen_note_id(user_id: i32) -> String {
     let ts = Utc::now().timestamp_millis();
@@ -162,7 +164,8 @@ pub async fn delete_note(pool: &PgPool, user_id: i32, note_id: &str) -> Result<(
     Ok(())
 }
 
-pub async fn fetch_html(url: &str) -> Result<FetchHtmlResponse, AppError> {
-    let html = get_html::get_html(url).await?;
-    Ok(FetchHtmlResponse { html })
+pub async fn fetch_html(
+    url: &str,
+) -> Result<StreamingCompletionResponse<OpenAiStreamingResponse>, AppError> {
+    Ok(get_html::get_html(url).await?)
 }

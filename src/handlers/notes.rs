@@ -1,14 +1,18 @@
 use axum::{
     Json,
+    body::Body,
     extract::{Path, State},
     http::StatusCode,
+    response::Response,
 };
+use bytes::Bytes;
+use futures::StreamExt;
+use rig_core::streaming::StreamedAssistantContent;
 
 use crate::auth::AuthUser;
 use crate::error::AppError;
 use crate::models::{
-    CreateNoteRequest, FetchHtmlRequest, FetchHtmlResponse, NoteResponse, NoteSummary,
-    UpdateNoteRequest,
+    CreateNoteRequest, FetchHtmlRequest, NoteResponse, NoteSummary, UpdateNoteRequest,
 };
 use crate::services;
 use crate::state::AppState;
@@ -58,9 +62,25 @@ pub async fn delete_note(
     Ok(StatusCode::NO_CONTENT)
 }
 
-pub async fn fetch_html(
-    Json(req): Json<FetchHtmlRequest>,
-) -> Result<(StatusCode, Json<FetchHtmlResponse>), AppError> {
-    let response = services::fetch_html(&req.url).await?;
-    Ok((StatusCode::OK, Json(response)))
+pub async fn fetch_html(Json(req): Json<FetchHtmlRequest>) -> Result<Response, AppError> {
+    let stream = services::fetch_html(&req.url).await?;
+    let byte_stream = stream.filter_map(|item| async move {
+        
+        match item {
+            Ok(StreamedAssistantContent::Text(text)) => {
+                println!("text: {}", text.text);
+                Some(Ok::<Bytes, String>(Bytes::from(text.text)))
+            }
+            Ok(StreamedAssistantContent::ReasoningDelta { reasoning, .. }) => {
+                Some(Ok::<Bytes, String>(Bytes::from(reasoning)))
+            }
+            Ok(_) => None,
+            Err(e) => Some(Err(e.to_string())),
+        }
+    });
+    Ok(Response::builder()
+        .status(StatusCode::OK)
+        .header("content-type", "text/plain; charset=utf-8")
+        .body(Body::from_stream(byte_stream))
+        .unwrap())
 }
