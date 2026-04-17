@@ -64,18 +64,28 @@ pub async fn delete_note(
 
 pub async fn fetch_html(Json(req): Json<FetchHtmlRequest>) -> Result<Response, AppError> {
     let stream = services::fetch_html(&req.url).await?;
-    let byte_stream = stream.filter_map(|item| async move {
+    let mut is_reasoning_delta = true;
+    let byte_stream = stream.filter_map(move |item| {
         match item {
             Ok(StreamedAssistantContent::Text(text)) => {
-                print!("{}", text.text);
-                let _ = std::io::Write::flush(&mut std::io::stdout());
-                Some(Ok::<Bytes, String>(Bytes::from(text.text)))
+                if is_reasoning_delta {
+                    is_reasoning_delta = false;
+                    let mut some_text = String::from("====text==== ");
+                    some_text.push_str(&text.text);
+                    print!("{}", some_text);
+                    let _ = std::io::Write::flush(&mut std::io::stdout());
+                    futures::future::ready(Some(Ok::<Bytes, String>(Bytes::from(some_text))))
+                } else {
+                    print!("{}", text.text);
+                    let _ = std::io::Write::flush(&mut std::io::stdout());
+                    futures::future::ready(Some(Ok::<Bytes, String>(Bytes::from(text.text))))
+                }
             }
             Ok(StreamedAssistantContent::ReasoningDelta { reasoning, .. }) => {
-                Some(Ok::<Bytes, String>(Bytes::from(reasoning)))
+                futures::future::ready(Some(Ok::<Bytes, String>(Bytes::from(reasoning))))
             }
-            Ok(_) => None,
-            Err(e) => Some(Err(e.to_string())),
+            Ok(_) => futures::future::ready(None),
+            Err(e) => futures::future::ready(Some(Err(e.to_string()))),
         }
     });
     Ok(Response::builder()
