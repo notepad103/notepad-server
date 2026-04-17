@@ -65,10 +65,10 @@ pub async fn delete_note(
 pub async fn fetch_html(Json(req): Json<FetchHtmlRequest>) -> Result<Response, AppError> {
     let stream = services::fetch_html(&req.url).await?;
     let byte_stream = stream.filter_map(|item| async move {
-        
         match item {
             Ok(StreamedAssistantContent::Text(text)) => {
-                println!("text: {}", text.text);
+                print!("{}", text.text);
+                let _ = std::io::Write::flush(&mut std::io::stdout());
                 Some(Ok::<Bytes, String>(Bytes::from(text.text)))
             }
             Ok(StreamedAssistantContent::ReasoningDelta { reasoning, .. }) => {
