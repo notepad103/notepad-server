@@ -7,7 +7,7 @@ use axum::{
 };
 use bytes::Bytes;
 use futures::StreamExt;
-use rig_core::streaming::StreamedAssistantContent;
+use rig::streaming::StreamedAssistantContent;
 
 use crate::auth::AuthUser;
 use crate::error::AppError;

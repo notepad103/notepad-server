@@ -1,9 +1,13 @@
-use rig_core::{
+use rig::{
+    agent::StreamingResult,
     client::{ProviderClient, completion::CompletionClient},
     completion::{CompletionModel, CompletionRequest},
-    providers::openai,
-    providers::openai::completion::streaming::StreamingCompletionResponse as OpenAiStreamingResponse,
-    streaming::StreamingCompletionResponse,
+    providers::openai::{
+        self,
+        completion::streaming::StreamingCompletionResponse as OpenAiCompletionStreamingResponse,
+        responses_api::streaming::StreamingCompletionResponse as OpenAiResponsesStreamingResponse,
+    },
+    streaming::{StreamingCompletionResponse, StreamingPrompt},
 };
 use std::sync::LazyLock;
 
@@ -30,7 +34,7 @@ pub async fn completion(question: &str) -> Result<String, AppError> {
         .map_err(|e| AppError::Internal(format!("llm completion failed: {e}")))?;
 
     let text = match answer.choice.first() {
-        rig_core::completion::message::AssistantContent::Text(text) => text.text,
+        rig::completion::message::AssistantContent::Text(text) => text.text,
         other => {
             return Err(AppError::Internal(format!(
                 "llm returned non-text content: {other:?}"
@@ -43,11 +47,22 @@ pub async fn completion(question: &str) -> Result<String, AppError> {
 
 pub async fn completion_stream(
     question: &str,
-) -> Result<StreamingCompletionResponse<OpenAiStreamingResponse>, AppError> {
+) -> Result<StreamingCompletionResponse<OpenAiCompletionStreamingResponse>, AppError> {
     let request = get_request(question);
     let answer = DEEPSEEK_REASONER
         .stream(request)
         .await
         .map_err(|e| AppError::Internal(format!("llm stream failed: {e}")))?;
     Ok(answer)
+}
+
+pub async fn create_agent() -> Result<StreamingResult<OpenAiResponsesStreamingResponse>, AppError> {
+    let client = openai::Client::from_env();
+    let agent = client
+        .agent("deepseek-reasoner")
+        .preamble("你是一名旅游达人,根据用户的问题,给出旅游建议")
+        .temperature(0.7)
+        .build();
+    let response = agent.stream_prompt("给我推荐一个上海明天的游玩计划").await;
+    Ok(response)
 }

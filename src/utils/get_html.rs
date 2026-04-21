@@ -1,7 +1,7 @@
 use crate::error::AppError;
 use crate::utils::openai_model::completion_stream;
 use readabilityrs::Readability;
-use rig_core::{
+use rig::{
     providers::openai::completion::streaming::StreamingCompletionResponse as OpenAiStreamingResponse,
     streaming::StreamingCompletionResponse,
 };

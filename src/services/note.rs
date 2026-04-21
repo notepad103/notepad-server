@@ -5,7 +5,7 @@ use tracing::info;
 use crate::error::AppError;
 use crate::models::{CreateNoteRequest, NoteResponse, NoteSummary, UpdateNoteRequest};
 use crate::utils::get_html;
-use rig_core::{
+use rig::{
     providers::openai::completion::streaming::StreamingCompletionResponse as OpenAiStreamingResponse,
     streaming::StreamingCompletionResponse,
 };
