@@ -7,6 +7,7 @@ use axum::{
 };
 use bytes::Bytes;
 use futures::StreamExt;
+use rig::agent::MultiTurnStreamItem;
 use rig::streaming::StreamedAssistantContent;
 
 use crate::auth::AuthUser;
@@ -87,6 +88,30 @@ pub async fn fetch_html(Json(req): Json<FetchHtmlRequest>) -> Result<Response, A
             Ok(_) => futures::future::ready(None),
             Err(e) => futures::future::ready(Some(Err(e.to_string()))),
         }
+    });
+    Ok(Response::builder()
+        .status(StatusCode::OK)
+        .header("content-type", "text/plain; charset=utf-8")
+        .body(Body::from_stream(byte_stream))
+        .unwrap())
+}
+
+pub async fn create_agent() -> Result<Response, AppError> {
+    let stream = services::create_agent().await?;
+    let byte_stream = stream.filter_map(move |item| match item {
+        Ok(MultiTurnStreamItem::StreamAssistantItem(StreamedAssistantContent::Text(text))) => {
+            futures::future::ready(Some(Ok::<Bytes, String>(Bytes::from(text.text))))
+        }
+        Ok(MultiTurnStreamItem::StreamAssistantItem(
+            StreamedAssistantContent::ReasoningDelta { reasoning, .. },
+        )) => {
+            futures::future::ready(Some(Ok::<Bytes, String>(Bytes::from(reasoning))))
+        }
+        Ok(MultiTurnStreamItem::FinalResponse(res)) => {
+            futures::future::ready(Some(Ok::<Bytes, String>(Bytes::from(res.response().to_string()))))
+        }
+        Ok(_) => futures::future::ready(None),
+        Err(e) => futures::future::ready(Some(Err(e.to_string()))),
     });
     Ok(Response::builder()
         .status(StatusCode::OK)

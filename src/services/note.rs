@@ -7,8 +7,11 @@ use crate::models::{CreateNoteRequest, NoteResponse, NoteSummary, UpdateNoteRequ
 use crate::utils::get_html;
 use rig::{
     providers::openai::completion::streaming::StreamingCompletionResponse as OpenAiStreamingResponse,
+    providers::openai::responses_api::streaming::StreamingCompletionResponse as OpenAiResponsesStreamingResponse,
+    agent::StreamingResult,
     streaming::StreamingCompletionResponse,
 };
+use crate::utils::openai_model;
 
 fn gen_note_id(user_id: i32) -> String {
     let ts = Utc::now().timestamp_millis();
@@ -168,4 +171,8 @@ pub async fn fetch_html(
     url: &str,
 ) -> Result<StreamingCompletionResponse<OpenAiStreamingResponse>, AppError> {
     Ok(get_html::get_html(url).await?)
+}
+
+pub async fn create_agent() -> Result<StreamingResult<OpenAiResponsesStreamingResponse>, AppError> {
+    Ok(openai_model::create_agent().await?)
 }
