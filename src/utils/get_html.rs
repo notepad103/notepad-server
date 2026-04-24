@@ -1,14 +1,11 @@
-use crate::error::AppError;
-use crate::utils::openai_model::completion_stream;
 use readabilityrs::Readability;
-use rig::{
-    providers::openai::completion::streaming::StreamingCompletionResponse as OpenAiStreamingResponse,
-    streaming::StreamingCompletionResponse,
-};
+use rig::{completion::ToolDefinition, tool::Tool};
+use serde::{Deserialize, Serialize};
+use serde_json::json;
 
-pub async fn get_html(
-    url: &str,
-) -> Result<StreamingCompletionResponse<OpenAiStreamingResponse>, AppError> {
+use crate::error::AppError;
+
+pub async fn fetch_readable_content(url: &str) -> Result<String, AppError> {
     let response = reqwest::get(url).await?;
     let raw_html = response.text().await?;
 
@@ -19,20 +16,62 @@ pub async fn get_html(
         Some(article) => article.content.unwrap_or(raw_html),
         None => raw_html,
     };
-    let question = format!(
-        r####"你是网页内容摘要器。根据网页 HTML 内容，直接输出中文摘要。
-         ## 要求：
-           - 只输出摘要结果，不要分析过程，不要复述要求，不要输出原文。
-           - 禁止补充推测、评价、背景、建议。
-           - 忽略导航、广告、页脚、脚本、样式残留、示例代码和重复内容。
-           - 不要出现“这篇文章”“文章提到”“对于开发者来说”“建议关注”“看起来”“用户需要”等表述。
-           - 如果信息不足或噪音过多，只输出：内容信息不足，无法准确总结
-           - 输出结果不要包含任何 HTML 标签。
-           - 不要遗漏关键点。
-           - 使用 Markdown 格式输出。
-        ## 网页内容：
-            {}"####,
-        content
-    );
-    Ok(completion_stream(&question).await?)
+
+    Ok(content)
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FetchWebpageArgs {
+    pub url: String,
+}
+
+#[derive(Debug, Serialize, Clone, Default)]
+pub struct FetchWebpageTool;
+
+pub enum FetchWebpageToolError {
+    App(AppError),
+}
+
+impl std::fmt::Display for FetchWebpageToolError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::App(e) => write!(f, "{e}"),
+        }
+    }
+}
+
+impl std::error::Error for FetchWebpageToolError {}
+
+impl From<AppError> for FetchWebpageToolError {
+    fn from(value: AppError) -> Self {
+        Self::App(value)
+    }
+}
+
+impl Tool for FetchWebpageTool {
+    const NAME: &'static str = "fetch_webpage";
+    type Error = FetchWebpageToolError;
+    type Args = FetchWebpageArgs;
+    type Output = String;
+
+    async fn definition(&self, _prompt: String) -> ToolDefinition {
+        ToolDefinition {
+            name: Self::NAME.to_string(),
+            description: "获取网页正文内容，返回可读文本（已去除大部分导航和噪音）".to_string(),
+            parameters: json!({
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "要抓取的网页 URL，必须包含 http:// 或 https://"
+                    }
+                },
+                "required": ["url"]
+            }),
+        }
+    }
+
+    async fn call(&self, args: Self::Args) -> Result<Self::Output, Self::Error> {
+        Ok(fetch_readable_content(&args.url).await?)
+    }
 }

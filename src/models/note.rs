@@ -42,6 +42,11 @@ pub struct FetchHtmlRequest {
     pub url: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct CreateAgentRequest {
+    pub prompt: String,
+}
+
 #[derive(Debug, Serialize)]
 pub struct FetchHtmlResponse {
     pub html: String,

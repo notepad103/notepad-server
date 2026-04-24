@@ -1,14 +1,16 @@
-enum Color {
-    Red { color: i32 },
-    Green(i32),
-    Blue(i32),
+fn consume<F>(mut f: F, x: i32) -> i32
+where
+    F: FnMut(i32) -> i32,
+{
+    f(x)
 }
 
 fn main() {
-    let a = Color::Red { color: 10 };
-    match a {
-        Color::Red { color: c @ 1..1000 } => println!("Red: {}", c),
-        Color::Red { color: c @ 1..100 } => println!("Red: {}", c),
-        _ => println!("Other"),
+    let mut y = 10;
+    let add_y = |x: i32| {
+        y += x;
+        y
     };
+    let b = consume(add_y, 1);
+    println!("{}", b);
 }

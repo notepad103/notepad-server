@@ -13,7 +13,8 @@ use rig::streaming::StreamedAssistantContent;
 use crate::auth::AuthUser;
 use crate::error::AppError;
 use crate::models::{
-    CreateNoteRequest, FetchHtmlRequest, NoteResponse, NoteSummary, UpdateNoteRequest,
+    CreateAgentRequest, CreateNoteRequest, FetchHtmlRequest, NoteResponse, NoteSummary,
+    UpdateNoteRequest,
 };
 use crate::services;
 use crate::state::AppState;
@@ -96,8 +97,8 @@ pub async fn fetch_html(Json(req): Json<FetchHtmlRequest>) -> Result<Response, A
         .unwrap())
 }
 
-pub async fn create_agent() -> Result<Response, AppError> {
-    let stream = services::create_agent().await?;
+pub async fn create_agent(Json(req): Json<CreateAgentRequest>) -> Result<Response, AppError> {
+    let stream = services::create_agent(&req.prompt).await?;
     let byte_stream = stream.filter_map(move |item| match item {
         Ok(MultiTurnStreamItem::StreamAssistantItem(StreamedAssistantContent::Text(text))) => {
             futures::future::ready(Some(Ok::<Bytes, String>(Bytes::from(text.text))))

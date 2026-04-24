@@ -18,7 +18,7 @@ pub fn router() -> Router<AppState> {
         )
         .route(
             "/notes/create-agent",
-            get(handlers::create_agent),
+            post(handlers::create_agent),
         )
         .route(
             "/notes/:id",

@@ -12,6 +12,7 @@ use rig::{
 use std::sync::LazyLock;
 
 use crate::AppError;
+use crate::utils::get_html::FetchWebpageTool;
 
 static DEEPSEEK_REASONER: LazyLock<openai::CompletionModel> = LazyLock::new(|| {
     let client = openai::Client::from_env().completions_api();
@@ -56,13 +57,18 @@ pub async fn completion_stream(
     Ok(answer)
 }
 
-pub async fn create_agent() -> Result<StreamingResult<OpenAiResponsesStreamingResponse>, AppError> {
+pub async fn create_agent(
+    prompt: &str,
+) -> Result<StreamingResult<OpenAiResponsesStreamingResponse>, AppError> {
     let client = openai::Client::from_env();
     let agent = client
         .agent("deepseek-reasoner")
-        .preamble("你是一名旅游达人,根据用户的问题,给出旅游建议")
+        .preamble(
+            "你是一个网页信息助手。需要网页内容时，优先调用 fetch_webpage 工具获取网页正文，再基于工具结果回答。",
+        )
+        .tool(FetchWebpageTool)
         .temperature(0.7)
         .build();
-    let response = agent.stream_prompt("给我推荐一个上海明天的游玩计划").await;
+    let response = agent.stream_prompt(prompt).await;
     Ok(response)
 }

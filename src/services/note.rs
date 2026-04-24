@@ -5,10 +5,11 @@ use tracing::info;
 use crate::error::AppError;
 use crate::models::{CreateNoteRequest, NoteResponse, NoteSummary, UpdateNoteRequest};
 use crate::utils::get_html;
+use crate::utils::openai_model::completion_stream;
 use rig::{
-    providers::openai::completion::streaming::StreamingCompletionResponse as OpenAiStreamingResponse,
     providers::openai::responses_api::streaming::StreamingCompletionResponse as OpenAiResponsesStreamingResponse,
     agent::StreamingResult,
+    providers::openai::completion::streaming::StreamingCompletionResponse as OpenAiStreamingResponse,
     streaming::StreamingCompletionResponse,
 };
 use crate::utils::openai_model;
@@ -170,9 +171,27 @@ pub async fn delete_note(pool: &PgPool, user_id: i32, note_id: &str) -> Result<(
 pub async fn fetch_html(
     url: &str,
 ) -> Result<StreamingCompletionResponse<OpenAiStreamingResponse>, AppError> {
-    Ok(get_html::get_html(url).await?)
+    let content = get_html::fetch_readable_content(url).await?;
+    let question = format!(
+        r####"你是网页内容摘要器。根据网页 HTML 内容，直接输出中文摘要。
+         ## 要求：
+           - 只输出摘要结果，不要分析过程，不要复述要求，不要输出原文。
+           - 禁止补充推测、评价、背景、建议。
+           - 忽略导航、广告、页脚、脚本、样式残留、示例代码和重复内容。
+           - 不要出现“这篇文章”“文章提到”“对于开发者来说”“建议关注”“看起来”“用户需要”等表述。
+           - 如果信息不足或噪音过多，只输出：内容信息不足，无法准确总结
+           - 输出结果不要包含任何 HTML 标签。
+           - 不要遗漏关键点。
+           - 使用 Markdown 格式输出。
+        ## 网页内容：
+            {}"####,
+        content
+    );
+    Ok(completion_stream(&question).await?)
 }
 
-pub async fn create_agent() -> Result<StreamingResult<OpenAiResponsesStreamingResponse>, AppError> {
-    Ok(openai_model::create_agent().await?)
+pub async fn create_agent(
+    prompt: &str,
+) -> Result<StreamingResult<OpenAiResponsesStreamingResponse>, AppError> {
+    Ok(openai_model::create_agent(prompt).await?)
 }
