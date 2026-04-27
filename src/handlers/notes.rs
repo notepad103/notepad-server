@@ -67,28 +67,26 @@ pub async fn delete_note(
 pub async fn fetch_html(Json(req): Json<FetchHtmlRequest>) -> Result<Response, AppError> {
     let stream = services::fetch_html(&req.url).await?;
     let mut is_reasoning_delta = true;
-    let byte_stream = stream.filter_map(move |item| {
-        match item {
-            Ok(StreamedAssistantContent::Text(text)) => {
-                if is_reasoning_delta {
-                    is_reasoning_delta = false;
-                    let mut some_text = String::from("====text==== ");
-                    some_text.push_str(&text.text);
-                    print!("{}", some_text);
-                    let _ = std::io::Write::flush(&mut std::io::stdout());
-                    futures::future::ready(Some(Ok::<Bytes, String>(Bytes::from(some_text))))
-                } else {
-                    print!("{}", text.text);
-                    let _ = std::io::Write::flush(&mut std::io::stdout());
-                    futures::future::ready(Some(Ok::<Bytes, String>(Bytes::from(text.text))))
-                }
+    let byte_stream = stream.filter_map(move |item| match item {
+        Ok(StreamedAssistantContent::Text(text)) => {
+            if is_reasoning_delta {
+                is_reasoning_delta = false;
+                let mut some_text = String::from("====text==== ");
+                some_text.push_str(&text.text);
+                print!("{}", some_text);
+                let _ = std::io::Write::flush(&mut std::io::stdout());
+                futures::future::ready(Some(Ok::<Bytes, String>(Bytes::from(some_text))))
+            } else {
+                print!("{}", text.text);
+                let _ = std::io::Write::flush(&mut std::io::stdout());
+                futures::future::ready(Some(Ok::<Bytes, String>(Bytes::from(text.text))))
             }
-            Ok(StreamedAssistantContent::ReasoningDelta { reasoning, .. }) => {
-                futures::future::ready(Some(Ok::<Bytes, String>(Bytes::from(reasoning))))
-            }
-            Ok(_) => futures::future::ready(None),
-            Err(e) => futures::future::ready(Some(Err(e.to_string()))),
         }
+        Ok(StreamedAssistantContent::ReasoningDelta { reasoning, .. }) => {
+            futures::future::ready(Some(Ok::<Bytes, String>(Bytes::from(reasoning))))
+        }
+        Ok(_) => futures::future::ready(None),
+        Err(e) => futures::future::ready(Some(Err(e.to_string()))),
     });
     Ok(Response::builder()
         .status(StatusCode::OK)
@@ -99,24 +97,45 @@ pub async fn fetch_html(Json(req): Json<FetchHtmlRequest>) -> Result<Response, A
 
 pub async fn create_agent(Json(req): Json<CreateAgentRequest>) -> Result<Response, AppError> {
     let stream = services::create_agent(&req.prompt).await?;
-    let byte_stream = stream.filter_map(move |item| match item {
-        Ok(MultiTurnStreamItem::StreamAssistantItem(StreamedAssistantContent::Text(text))) => {
-            futures::future::ready(Some(Ok::<Bytes, String>(Bytes::from(text.text))))
+
+    let byte_stream = stream.filter_map(move |item| {
+        println!("item: =================================");
+        match item {
+            Ok(MultiTurnStreamItem::StreamAssistantItem(StreamedAssistantContent::Text(text))) => {
+                println!("text: {}", text.text);
+                let payload = format!("data: {}\n\n", text.text.replace('\n', "\ndata: "));
+                futures::future::ready(Some(Ok::<Bytes, String>(Bytes::from(payload))))
+            }
+            Ok(MultiTurnStreamItem::StreamAssistantItem(
+                StreamedAssistantContent::ReasoningDelta { reasoning, .. },
+            )) => {
+                println!("reasoning: {}", reasoning);
+                let payload = format!("data: {}\n\n", reasoning.replace('\n', "\ndata: "));
+                futures::future::ready(Some(Ok::<Bytes, String>(Bytes::from(payload))))
+            }
+            Ok(MultiTurnStreamItem::FinalResponse(res)) => {
+                println!("final response: {}", res.response().to_string());
+                let payload = format!(
+                    "data: {}\n\n",
+                    res.response().to_string().replace('\n', "\ndata: ")
+                );
+                futures::future::ready(Some(Ok::<Bytes, String>(Bytes::from(payload))))
+            }
+            Ok(_) => {
+                println!("ok: =================================");
+                futures::future::ready(None)
+            }
+            Err(e) => {
+                println!("err: =================================${}", e.to_string());
+                futures::future::ready(Some(Err(e.to_string())))
+            }
         }
-        Ok(MultiTurnStreamItem::StreamAssistantItem(
-            StreamedAssistantContent::ReasoningDelta { reasoning, .. },
-        )) => {
-            futures::future::ready(Some(Ok::<Bytes, String>(Bytes::from(reasoning))))
-        }
-        Ok(MultiTurnStreamItem::FinalResponse(res)) => {
-            futures::future::ready(Some(Ok::<Bytes, String>(Bytes::from(res.response().to_string()))))
-        }
-        Ok(_) => futures::future::ready(None),
-        Err(e) => futures::future::ready(Some(Err(e.to_string()))),
     });
     Ok(Response::builder()
         .status(StatusCode::OK)
-        .header("content-type", "text/plain; charset=utf-8")
+        .header("content-type", "text/event-stream; charset=utf-8")
+        .header("cache-control", "no-cache")
+        .header("connection", "keep-alive")
         .body(Body::from_stream(byte_stream))
         .unwrap())
 }

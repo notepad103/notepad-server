@@ -7,7 +7,6 @@ use crate::models::{CreateNoteRequest, NoteResponse, NoteSummary, UpdateNoteRequ
 use crate::utils::get_html;
 use crate::utils::openai_model::completion_stream;
 use rig::{
-    providers::openai::responses_api::streaming::StreamingCompletionResponse as OpenAiResponsesStreamingResponse,
     agent::StreamingResult,
     providers::openai::completion::streaming::StreamingCompletionResponse as OpenAiStreamingResponse,
     streaming::StreamingCompletionResponse,
@@ -192,6 +191,7 @@ pub async fn fetch_html(
 
 pub async fn create_agent(
     prompt: &str,
-) -> Result<StreamingResult<OpenAiResponsesStreamingResponse>, AppError> {
+) -> Result<StreamingResult<OpenAiStreamingResponse>, AppError> {
+    
     Ok(openai_model::create_agent(prompt).await?)
 }

@@ -73,6 +73,8 @@ impl Tool for FetchWebpageTool {
     }
 
     async fn call(&self, args: Self::Args) -> Result<Self::Output, Self::Error> {
+        println!("call: =================================");
+        println!("args: {:?}", args);
         Ok(fetch_readable_content(&args.url).await?)
     }
 }
