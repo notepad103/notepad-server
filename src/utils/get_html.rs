@@ -28,6 +28,7 @@ pub struct FetchWebpageArgs {
 #[derive(Debug, Serialize, Clone, Default)]
 pub struct FetchWebpageTool;
 
+#[derive(Debug)]
 pub enum FetchWebpageToolError {
     App(AppError),
 }
