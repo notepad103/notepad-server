@@ -96,6 +96,7 @@ pub async fn fetch_html(Json(req): Json<FetchHtmlRequest>) -> Result<Response, A
 }
 
 pub async fn create_agent(Json(req): Json<CreateAgentRequest>) -> Result<Response, AppError> {
+    println!("item: =================================");
     let stream = services::create_agent(&req.prompt).await?;
 
     let byte_stream = stream.filter_map(move |item| {
@@ -103,20 +104,26 @@ pub async fn create_agent(Json(req): Json<CreateAgentRequest>) -> Result<Respons
         match item {
             Ok(MultiTurnStreamItem::StreamAssistantItem(StreamedAssistantContent::Text(text))) => {
                 println!("text: {}", text.text);
-                let payload = format!("data: {}\n\n", text.text.replace('\n', "\ndata: "));
+                let payload = format!(
+                    "event: answer\ndata: {}\n\n",
+                    text.text.replace('\n', "\ndata: ")
+                );
                 futures::future::ready(Some(Ok::<Bytes, String>(Bytes::from(payload))))
             }
             Ok(MultiTurnStreamItem::StreamAssistantItem(
                 StreamedAssistantContent::ReasoningDelta { reasoning, .. },
             )) => {
                 println!("reasoning: {}", reasoning);
-                let payload = format!("data: {}\n\n", reasoning.replace('\n', "\ndata: "));
+                let payload = format!(
+                    "event: reasoning\ndata: {}\n\n",
+                    reasoning.replace('\n', "\ndata: ")
+                );
                 futures::future::ready(Some(Ok::<Bytes, String>(Bytes::from(payload))))
             }
             Ok(MultiTurnStreamItem::FinalResponse(res)) => {
                 println!("final response: {}", res.response().to_string());
                 let payload = format!(
-                    "data: {}\n\n",
+                    "event: final\ndata: {}\n\n",
                     res.response().to_string().replace('\n', "\ndata: ")
                 );
                 futures::future::ready(Some(Ok::<Bytes, String>(Bytes::from(payload))))

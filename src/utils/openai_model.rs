@@ -2,11 +2,13 @@ use rig::{
     agent::StreamingResult,
     client::{ProviderClient, completion::CompletionClient},
     completion::{CompletionModel, CompletionRequest},
+    message::Message,
     providers::openai::{
         self,
-        completion::streaming::StreamingCompletionResponse as OpenAiCompletionStreamingResponse,
+        completion::streaming::StreamingCompletionResponse as OpenAiCompletionsStreamingResponse,
+        responses_api::streaming::StreamingCompletionResponse as OpenAiCompletionStreamingResponse,
     },
-    streaming::{StreamingCompletionResponse, StreamingPrompt},
+    streaming::{StreamingChat, StreamingCompletionResponse},
 };
 use std::sync::LazyLock;
 
@@ -49,7 +51,7 @@ pub async fn completion(question: &str) -> Result<String, AppError> {
 
 pub async fn completion_stream(
     question: &str,
-) -> Result<StreamingCompletionResponse<OpenAiCompletionStreamingResponse>, AppError> {
+) -> Result<StreamingCompletionResponse<OpenAiCompletionsStreamingResponse>, AppError> {
     let request = get_request(question);
     let answer = DEEPSEEK_REASONER
         .stream(request)
@@ -61,16 +63,16 @@ pub async fn completion_stream(
 pub async fn create_agent(
     prompt: &str,
 ) -> Result<StreamingResult<OpenAiCompletionStreamingResponse>, AppError> {
-    let client = OPENAI_CLIENT.clone().completions_api();
+    let client = OPENAI_CLIENT.clone();
     let agent = client
-        .agent("deepseek-chat")
+        .agent("deepseek-v4-pro")
         .preamble(
             "你是一个网页信息助手。需要网页内容时，优先调用 fetch_webpage 工具获取网页正文，再基于工具结果回答。",
         )
         .tool(FetchWebpageTool)
         .temperature(0.7)
         .build();
-    let response = agent.stream_prompt(prompt).await;
-    
+    let response = agent.stream_chat(prompt, Vec::<Message>::new()).multi_turn(5).await;
+
     Ok(response)
 }
