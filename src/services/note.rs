@@ -8,10 +8,7 @@ use crate::utils::get_html;
 use crate::utils::openai_model::completion_stream;
 use rig::{
     agent::StreamingResult,
-    providers::openai::{
-        completion::streaming::StreamingCompletionResponse as OpenAiCompletionsStreamingResponse,
-        responses_api::streaming::StreamingCompletionResponse as OpenAiResponsesStreamingResponse,
-    },
+    providers::openai::completion::streaming::StreamingCompletionResponse as OpenAiStreamingResponse,
     streaming::StreamingCompletionResponse,
 };
 use crate::utils::openai_model;
@@ -172,7 +169,7 @@ pub async fn delete_note(pool: &PgPool, user_id: i32, note_id: &str) -> Result<(
 
 pub async fn fetch_html(
     url: &str,
-) -> Result<StreamingCompletionResponse<OpenAiCompletionsStreamingResponse>, AppError> {
+) -> Result<StreamingCompletionResponse<OpenAiStreamingResponse>, AppError> {
     let content = get_html::fetch_readable_content(url).await?;
     let question = format!(
         r####"你是网页内容摘要器。根据网页 HTML 内容，直接输出中文摘要。
@@ -194,7 +191,7 @@ pub async fn fetch_html(
 
 pub async fn create_agent(
     prompt: &str,
-) -> Result<StreamingResult<OpenAiResponsesStreamingResponse>, AppError> {
+) -> Result<StreamingResult<OpenAiStreamingResponse>, AppError> {
     
     Ok(openai_model::create_agent(prompt).await?)
 }

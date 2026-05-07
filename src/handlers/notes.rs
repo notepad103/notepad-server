@@ -114,11 +114,7 @@ pub async fn create_agent(Json(req): Json<CreateAgentRequest>) -> Result<Respons
                 StreamedAssistantContent::ReasoningDelta { reasoning, .. },
             )) => {
                 println!("reasoning: {}", reasoning);
-                let payload = format!(
-                    "event: reasoning\ndata: {}\n\n",
-                    reasoning.replace('\n', "\ndata: ")
-                );
-                futures::future::ready(Some(Ok::<Bytes, String>(Bytes::from(payload))))
+                futures::future::ready(None)
             }
             Ok(MultiTurnStreamItem::FinalResponse(res)) => {
                 println!("final response: {}", res.response().to_string());

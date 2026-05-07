@@ -5,8 +5,7 @@ use rig::{
     message::Message,
     providers::openai::{
         self,
-        completion::streaming::StreamingCompletionResponse as OpenAiCompletionsStreamingResponse,
-        responses_api::streaming::StreamingCompletionResponse as OpenAiCompletionStreamingResponse,
+        completion::streaming::StreamingCompletionResponse as OpenAiCompletionStreamingResponse,
     },
     streaming::{StreamingChat, StreamingCompletionResponse},
 };
@@ -51,7 +50,7 @@ pub async fn completion(question: &str) -> Result<String, AppError> {
 
 pub async fn completion_stream(
     question: &str,
-) -> Result<StreamingCompletionResponse<OpenAiCompletionsStreamingResponse>, AppError> {
+) -> Result<StreamingCompletionResponse<OpenAiCompletionStreamingResponse>, AppError> {
     let request = get_request(question);
     let answer = DEEPSEEK_REASONER
         .stream(request)
@@ -63,13 +62,16 @@ pub async fn completion_stream(
 pub async fn create_agent(
     prompt: &str,
 ) -> Result<StreamingResult<OpenAiCompletionStreamingResponse>, AppError> {
-    let client = OPENAI_CLIENT.clone();
+    let client = OPENAI_CLIENT.clone().completions_api();
     let agent = client
         .agent("deepseek-v4-pro")
         .preamble(
             "你是一个网页信息助手。需要网页内容时，优先调用 fetch_webpage 工具获取网页正文，再基于工具结果回答。",
         )
         .tool(FetchWebpageTool)
+        .additional_params(serde_json::json!({
+            "thinking": { "type": "disabled" }
+        }))
         .temperature(0.7)
         .build();
     let response = agent.stream_chat(prompt, Vec::<Message>::new()).multi_turn(5).await;
