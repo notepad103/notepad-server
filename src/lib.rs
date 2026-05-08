@@ -18,17 +18,31 @@ pub use state::AppState;
 
 use redis::aio::ConnectionManager;
 use sqlx::postgres::PgPoolOptions;
+use std::sync::OnceLock;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 use tracing::{info, Level};
+use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+use tracing_appender::rolling;
+
+static TRACING_GUARD: OnceLock<WorkerGuard> = OnceLock::new();
 
 /// 初始化 tracing-subscriber，从 RUST_LOG 环境变量读取过滤级别。
 /// 若 RUST_LOG 未设置，默认只打印本 crate 的 INFO 及以上日志。
 pub fn init_tracing() {
+    std::fs::create_dir_all("logs").expect("failed to create logs directory");
+    let file_appender = rolling::never("logs", "notepad.log");
+    let (non_blocking_writer, guard) = tracing_appender::non_blocking(file_appender);
+    let _ = TRACING_GUARD.set(guard);
+
     let default_filter = format!("{}=info,tower_http=info", env!("CARGO_PKG_NAME"));
     tracing_subscriber::registry()
         .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| default_filter.into()))
-        .with(tracing_subscriber::fmt::layer())
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_ansi(false)
+                .with_writer(non_blocking_writer),
+        )
         .init();
 }
 

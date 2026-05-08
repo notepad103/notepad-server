@@ -1,0 +1,2 @@
+2026-05-08T08:29:36.983748Z  INFO notepad: HTTP 服务启动: http://0.0.0.0:3000
+2026-05-08T08:30:47.280199Z  INFO request{method=POST uri=/notes/create-agent version=HTTP/1.1}: tower_http::trace::on_response: finished processing request latency=9 ms status=200

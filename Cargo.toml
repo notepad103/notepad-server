@@ -25,3 +25,4 @@ readabilityrs = "0.1"
 rig = { version = "0.35.0", package = "rig-core" }
 futures = "0.3"
 bytes = "1.11.1"
+tracing-appender = "0.2.5"
